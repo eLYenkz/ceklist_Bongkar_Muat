@@ -309,10 +309,28 @@ body{font-family:'Syne',sans-serif;background:var(--cream);min-height:100vh;padd
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
 let records  = JSON.parse(localStorage.getItem('gudangKA_v4') || '[]');
-let slotState = {1: null, 2: null};   // null = empty
-let jenisBOpen = {1: false, 2: false};
-let activeJenisTab = {1: 'A', 2: 'A'};
-let pendingSave = null;  // {slot}
+let pendingSave = null;
+
+// Restore draft slot state (survives screen-off / browser reload)
+function loadDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem('gudangKA_draft') || 'null');
+    if(d) return d;
+  } catch(e){}
+  return {
+    slotState:     {1:null, 2:null},
+    jenisBOpen:    {1:false, 2:false},
+    activeJenisTab:{1:'A',  2:'A'}
+  };
+}
+const draft        = loadDraft();
+let slotState      = draft.slotState;
+let jenisBOpen     = draft.jenisBOpen;
+let activeJenisTab = draft.activeJenisTab;
+
+function saveDraft(){
+  localStorage.setItem('gudangKA_draft', JSON.stringify({slotState, jenisBOpen, activeJenisTab}));
+}
 
 // ── Clock ─────────────────────────────────────────────────────────────────────
 function updateClock(){
@@ -456,25 +474,27 @@ function startSlot(slot){
   slotState[slot] = {supplier:'',nopol:'',sopir:'',kaA:[null,null,null,null,null,null],kaB:[null,null,null,null,null,null],avgA:null,avgB:null,karungA:null,karungB:null};
   jenisBOpen[slot] = false;
   activeJenisTab[slot] = 'A';
+  saveDraft();
   renderSlot(slot);
 }
 
 function updateField(slot,field,val){
-  if(slotState[slot]) slotState[slot][field] = val;
+  if(slotState[slot]){ slotState[slot][field] = val; saveDraft(); }
 }
 
 function updateKA(slot,jenis,idx,val){
   if(!slotState[slot]) return;
   const arr = jenis==='A'?slotState[slot].kaA:slotState[slot].kaB;
   arr[idx] = val===''?null:parseFloat(val);
+  saveDraft();
 }
 
 function switchTab(slot, jenis) {
-  // If clicking Jenis B tab and it's not open yet, open it first
   if(jenis === 'B' && !jenisBOpen[slot]) {
     jenisBOpen[slot] = true;
   }
   activeJenisTab[slot] = jenis;
+  saveDraft();
   renderSlot(slot);
 }
 
@@ -484,6 +504,7 @@ function toggleJenisB(slot){
   slotState[slot].avgB = null;
   slotState[slot].karungB = null;
   activeJenisTab[slot] = 'A';
+  saveDraft();
   renderSlot(slot);
 }
 
@@ -501,11 +522,13 @@ function hitungRata(slot,jenis){
     subEl.textContent='Belum ada data';
     badgeEl.innerHTML='';
     if(jenis==='A') s.avgA=null; else s.avgB=null;
+    saveDraft();
     return;
   }
   const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
   const avgStr = avg.toFixed(2);
   if(jenis==='A') s.avgA=avgStr; else s.avgB=avgStr;
+  saveDraft();
   valEl.innerHTML = avgStr+'<span>%</span>';
   subEl.textContent = vals.length+' ukuran: '+vals.map(v=>v.toFixed(1)).join(', ');
   badgeEl.innerHTML = badgeHtml(avg);
@@ -577,6 +600,7 @@ function confirmSave(){
   slotState[slot] = null;
   jenisBOpen[slot] = false;
   activeJenisTab[slot] = 'A';
+  saveDraft();
   hideModal();
   renderSlot(slot);
   renderHistory();
