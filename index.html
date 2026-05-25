@@ -526,7 +526,7 @@ function hitungRata(slot,jenis){
     return;
   }
   const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
-  const avgStr = avg.toFixed(2);
+  const avgStr = avg.toFixed(1);
   if(jenis==='A') s.avgA=avgStr; else s.avgB=avgStr;
   saveDraft();
   valEl.innerHTML = avgStr+'<span>%</span>';
