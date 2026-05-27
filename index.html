@@ -13,35 +13,13 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0d1117"/>
 
-<!-- Icon: inline SVG → base64 untuk apple & android -->
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8IS0tIEJhY2tncm91bmQgcm91bmRlZCByZWN0IC0tPgogIDxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTAwIiBmaWxsPSIjMGQxMTE3Ii8+CiAgPCEtLSBJbm5lciBjYXJkIC0tPgogIDxyZWN0IHg9IjM2IiB5PSIzNiIgd2lkdGg9IjQ0MCIgaGVpZ2h0PSI0NDAiIHJ4PSI3MiIgZmlsbD0iIzFjMjMzMyIvPgogIDwhLS0gT3JhbmdlIGFjY2VudCB0b3AgYmFyIC0tPgogIDxyZWN0IHg9IjM2IiB5PSIzNiIgd2lkdGg9IjQ0MCIgaGVpZ2h0PSIxMCIgcng9IjUiIGZpbGw9IiNmOTczMTYiLz4KICA8IS0tICJVRCIgYmlnIHRleHQgLS0+CiAgPHRleHQgeD0iMjU2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4MCIgZm9udC13ZWlnaHQ9IjkwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2Y5NzMxNiI+VUQ8L3RleHQ+CiAgPCEtLSBEaXZpZGVyIGxpbmUgLS0+CiAgPHJlY3QgeD0iODAiIHk9IjI1OCIgd2lkdGg9IjM1MiIgaGVpZ2h0PSI1IiByeD0iMyIgZmlsbD0iIzJhMzM0OCIvPgogIDwhLS0gIk1BSlUgTEFOQ0FSIiAtLT4KICA8dGV4dCB4PSIyNTYiIHk9IjMzMCIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTIiIGZvbnQtd2VpZ2h0PSI4MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNlMmU4ZjQiIGxldHRlci1zcGFjaW5nPSI0Ij5NQUpVPC90ZXh0PgogIDx0ZXh0IHg9IjI1NiIgeT0iMzkyIiBmb250LWZhbWlseT0iQXJpYWwgQmxhY2ssc2Fucy1zZXJpZiIgZm9udC1zaXplPSI1MiIgZm9udC13ZWlnaHQ9IjgwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2UyZThmNCIgbGV0dGVyLXNwYWNpbmc9IjQiPkxBTkNBUjwvdGV4dD4KICA8IS0tIEJvdHRvbSBvcmFuZ2UgZG90IGFjY2VudCAtLT4KICA8Y2lyY2xlIGN4PSIyNTYiIGN5PSI0NDAiIHI9IjE0IiBmaWxsPSIjZjk3MzE2Ii8+Cjwvc3ZnPgo="/>
+<!-- Icons -->
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
 
-<!-- Manifest inline via JS (no separate file needed) -->
-<script>
-const manifest = {
-  name: "UD. Maju Lancar — Bongkar Muat",
-  short_name: "Maju Lancar",
-  description: "Aplikasi Bongkar Muat UD. Maju Lancar",
-  start_url: "./",
-  display: "standalone",
-  background_color: "#0d1117",
-  theme_color: "#0d1117",
-  orientation: "portrait",
-  icons: [
-    {
-      src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8IS0tIEJhY2tncm91bmQgcm91bmRlZCByZWN0IC0tPgogIDxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTAwIiBmaWxsPSIjMGQxMTE3Ii8+CiAgPCEtLSBJbm5lciBjYXJkIC0tPgogIDxyZWN0IHg9IjM2IiB5PSIzNiIgd2lkdGg9IjQ0MCIgaGVpZ2h0PSI0NDAiIHJ4PSI3MiIgZmlsbD0iIzFjMjMzMyIvPgogIDwhLS0gT3JhbmdlIGFjY2VudCB0b3AgYmFyIC0tPgogIDxyZWN0IHg9IjM2IiB5PSIzNiIgd2lkdGg9IjQ0MCIgaGVpZ2h0PSIxMCIgcng9IjUiIGZpbGw9IiNmOTczMTYiLz4KICA8IS0tICJVRCIgYmlnIHRleHQgLS0+CiAgPHRleHQgeD0iMjU2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4MCIgZm9udC13ZWlnaHQ9IjkwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2Y5NzMxNiI+VUQ8L3RleHQ+CiAgPCEtLSBEaXZpZGVyIGxpbmUgLS0+CiAgPHJlY3QgeD0iODAiIHk9IjI1OCIgd2lkdGg9IjM1MiIgaGVpZ2h0PSI1IiByeD0iMyIgZmlsbD0iIzJhMzM0OCIvPgogIDwhLS0gIk1BSlUgTEFOQ0FSIiAtLT4KICA8dGV4dCB4PSIyNTYiIHk9IjMzMCIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTIiIGZvbnQtd2VpZ2h0PSI4MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNlMmU4ZjQiIGxldHRlci1zcGFjaW5nPSI0Ij5NQUpVPC90ZXh0PgogIDx0ZXh0IHg9IjI1NiIgeT0iMzkyIiBmb250LWZhbWlseT0iQXJpYWwgQmxhY2ssc2Fucy1zZXJpZiIgZm9udC1zaXplPSI1MiIgZm9udC13ZWlnaHQ9IjgwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2UyZThmNCIgbGV0dGVyLXNwYWNpbmc9IjQiPkxBTkNBUjwvdGV4dD4KICA8IS0tIEJvdHRvbSBvcmFuZ2UgZG90IGFjY2VudCAtLT4KICA8Y2lyY2xlIGN4PSIyNTYiIGN5PSI0NDAiIHI9IjE0IiBmaWxsPSIjZjk3MzE2Ii8+Cjwvc3ZnPgo=",
-      sizes: "256x256",
-      type: "image/svg+xml",
-      purpose: "any maskable"
-    }
-  ]
-};
-const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
-const url = URL.createObjectURL(blob);
-const link = document.createElement('link');
-link.rel = 'manifest'; link.href = url;
-document.currentScript.after(link);
-</script>
+<!-- Manifest -->
+<link rel="manifest" href="manifest.json"/>
 
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet"/>
 <style>
