@@ -14,36 +14,79 @@
 <meta name="theme-color" content="#0d1117"/>
 
 <!-- Icons -->
-<link rel="apple-touch-icon" sizes="192x192" href="/ceklist_Bongkar_Muat/icon-192.png"/>
-<link rel="apple-touch-icon" sizes="512x512" href="/ceklist_Bongkar_Muat/icon-512.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="/ceklist_Bongkar_Muat/icon-192.png"/>
+<link rel="apple-touch-icon" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/icon-192.png"/>
+<link rel="icon" type="image/png" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/icon-192.png"/>
 
-<!-- Manifest: generated dynamically so start_url always matches current location -->
-<script>
-(function(){
-  const base = window.location.href.replace(/\/[^\/]*$/, '/');
-  const manifest = {
-    name: "UD. Maju Lancar — Bongkar Muat",
-    short_name: "Maju Lancar",
-    description: "Aplikasi Bongkar Muat UD. Maju Lancar",
-    start_url: window.location.href,
-    scope: base,
-    display: "standalone",
-    background_color: "#0d1117",
-    theme_color: "#0d1117",
-    orientation: "portrait",
-    icons: [
-      { src: "/ceklist_Bongkar_Muat/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-      { src: "/ceklist_Bongkar_Muat/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('link');
-  link.rel = 'manifest';
-  link.href = url;
-  document.head.appendChild(link);
-})();
+<!-- Manifest -->
+<link rel="manifest" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/manifest.json"/>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVaIWggf0QV_H0rtZCscNz_jUyl2f67os",
+  authDomain: "majulancar-58d53.firebaseapp.com",
+  projectId: "majulancar-58d53",
+  storageBucket: "majulancar-58d53.firebasestorage.app",
+  messagingSenderId: "91106576286",
+  appId: "1:91106576286:web:287334f85f48230284388f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COL = 'transaksi';
+
+function updateDbBadge(state){
+  const el = document.getElementById('db-badge');
+  if(!el) return;
+  if(state==='sync')    { el.textContent='🔄 Sinkronisasi...'; el.style.background='#3b82f618'; el.style.color='#3b82f6';  el.style.borderColor='#3b82f640'; }
+  else if(state==='ok') { el.textContent='☁️ Live Sync';       el.style.background='#22c55e18'; el.style.color='#22c55e';  el.style.borderColor='#22c55e40'; }
+  else if(state==='offline'){ el.textContent='⚠️ Offline';    el.style.background='#f9731618'; el.style.color='#f97316';  el.style.borderColor='#f9731640'; }
+}
+window._updateDbBadge = updateDbBadge;
+
+// ── Add record ──
+window._fbAdd = async (rec) => {
+  try {
+    await addDoc(collection(db, COL), rec);
+    return true;
+  } catch(e){ console.error('fbAdd',e); return false; }
+};
+
+// ── Delete record ──
+window._fbDelete = async (docId) => {
+  try {
+    await deleteDoc(doc(db, COL, docId));
+    return true;
+  } catch(e){ console.error('fbDel',e); return false; }
+};
+
+window._fbReady = true;
+
+// ── REAL-TIME LISTENER — fires immediately on load + on every change ──
+document.addEventListener('DOMContentLoaded', () => {
+  updateDbBadge('sync');
+  const q = query(collection(db, COL), orderBy('tanggal','desc'));
+
+  onSnapshot(q,
+    (snap) => {
+      // Update localStorage with latest cloud data
+      const docs = snap.docs.map(d => ({...d.data(), _docId: d.id}));
+      localStorage.setItem('bmv3', JSON.stringify(docs));
+      updateDbBadge('ok');
+      // If rekap page is open, refresh it live
+      if(document.getElementById('page-rekap')?.classList.contains('active')){
+        if(typeof renderRekap === 'function') renderRekap();
+      }
+    },
+    (err) => {
+      console.error('onSnapshot', err);
+      updateDbBadge('offline');
+    }
+  );
+});
 </script>
 
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet"/>
@@ -309,7 +352,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 <div class="topbar">
   <div class="logo">UD. <b>Maju Lancar</b></div>
-  <div class="db-badge">💾 Data Tersimpan</div>
+  <div class="db-badge" id="db-badge">☁️ Cloud Aktif</div>
 </div>
 
 <div class="scroll-area">
@@ -521,10 +564,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 <div id="toast">✅ Tersimpan!</div>
 
 <script>
-// ═══ STORAGE ═══
+// ═══ STORAGE (Firebase primary + localStorage cache) ═══
 const KEY='bmv3';
 const getData=()=>{ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch{ return []; }};
 const setData=d=>localStorage.setItem(KEY,JSON.stringify(d));
+
+// Save to Firebase + localStorage
+async function saveRec(rec){
+  // Save to localStorage immediately (fast)
+  const d=getData(); d.unshift(rec); setData(d);
+  // Save to Firebase in background
+  if(window._fbReady){
+    window._updateDbBadge('sync');
+    const ok = await window._fbAdd(rec);
+    if(ok){
+      // Refresh from Firestore so _docId is populated
+      const docs = await window._fbGetAll();
+      if(docs!==null){ setData(docs); }
+      window._updateDbBadge('ok');
+    } else {
+      window._updateDbBadge('offline');
+    }
+  }
+}
+
+// Delete from Firebase + localStorage
+async function deleteRec(id){
+  const d=getData();
+  const rec=d.find(r=>r.id===id);
+  // Delete from localStorage
+  setData(d.filter(r=>r.id!==id));
+  // Delete from Firestore
+  if(window._fbReady && rec?._docId){
+    window._updateDbBadge('sync');
+    await window._fbDelete(rec._docId);
+    window._updateDbBadge('ok');
+  }
+}
 
 // ═══ STATE ═══
 let jenisMuat='muat';
@@ -722,6 +798,7 @@ function bSelesaikan(si) {
   bSlots.splice(si, 1);
   bRenderAll();
   toast(`✅ Bongkar ${slot.nopol} disimpan!`);
+  saveRec(rec).then(()=>{ bRenderAll(); });
 }
 
 function bBatalSlot(si) {
@@ -755,6 +832,7 @@ function simpanMuat(){
   const d=getData(); d.unshift(rec); setData(d);
   toast('✅ Muat disimpan!');
   kosongkanMuat();
+  saveRec(rec);
 }
 function kosongkanMuat(){
   ['m-nopol','m-sopir','m-ekspedisi','m-tujuan'].forEach(id=>document.getElementById(id).value='');
@@ -860,6 +938,7 @@ function selesaikanSesi(){
   const d=getData(); d.unshift(rec); setData(d);
   toast(`✅ Sesi disimpan! ${ngSesi.trukKecil.length} TK, ${totK} karung`);
   resetSesi();
+  saveRec(rec);
 }
 function batalSesi(){
   if(!confirm('Batalkan sesi? Data hilang.')) return;
@@ -972,7 +1051,7 @@ function renderRekap(){
 
 function hapusRec(id){
   if(!confirm('Hapus transaksi ini?')) return;
-  setData(getData().filter(r=>r.id!==id));
+  deleteRec(id).then(()=>renderRekap());
   renderRekap();
 }
 
