@@ -4,347 +4,245 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Bongkar Muat — UD. Maju Lancar</title>
-
-<!-- PWA & Home Screen -->
-<meta name="application-name" content="UD. Maju Lancar"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Maju Lancar"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0d1117"/>
-
-<!-- Icons -->
 <link rel="apple-touch-icon" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/icon-192.png"/>
 <link rel="icon" type="image/png" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/icon-192.png"/>
-
-<!-- Manifest -->
 <link rel="manifest" href="https://elyenkz.github.io/ceklist_Bongkar_Muat/manifest.json"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCVaIWggf0QV_H0rtZCscNz_jUyl2f67os",
-  authDomain: "majulancar-58d53.firebaseapp.com",
-  projectId: "majulancar-58d53",
-  storageBucket: "majulancar-58d53.firebasestorage.app",
-  messagingSenderId: "91106576286",
-  appId: "1:91106576286:web:287334f85f48230284388f"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const fb = initializeApp({
+  apiKey:"AIzaSyCVaIWggf0QV_H0rtZCscNz_jUyl2f67os",
+  authDomain:"majulancar-58d53.firebaseapp.com",
+  projectId:"majulancar-58d53",
+  storageBucket:"majulancar-58d53.firebasestorage.app",
+  messagingSenderId:"91106576286",
+  appId:"1:91106576286:web:287334f85f48230284388f"
+});
+const db = getFirestore(fb);
 const COL = 'transaksi';
 
-function updateDbBadge(state){
-  const el = document.getElementById('db-badge');
-  if(!el) return;
-  if(state==='sync')    { el.textContent='🔄 Sinkronisasi...'; el.style.background='#3b82f618'; el.style.color='#3b82f6';  el.style.borderColor='#3b82f640'; }
-  else if(state==='ok') { el.textContent='☁️ Live Sync';       el.style.background='#22c55e18'; el.style.color='#22c55e';  el.style.borderColor='#22c55e40'; }
-  else if(state==='offline'){ el.textContent='⚠️ Offline';    el.style.background='#f9731618'; el.style.color='#f97316';  el.style.borderColor='#f9731640'; }
+function badge(s){
+  const el=document.getElementById('db-badge'); if(!el) return;
+  const cfg={
+    sync:['🔄 Sync...','#3b82f618','#3b82f6','#3b82f640'],
+    ok:  ['☁️ Live Sync','#22c55e18','#22c55e','#22c55e40'],
+    off: ['⚠️ Offline','#f9731618','#f97316','#f9731640']
+  }[s];
+  el.textContent=cfg[0]; el.style.background=cfg[1]; el.style.color=cfg[2]; el.style.borderColor=cfg[3];
 }
-window._updateDbBadge = updateDbBadge;
-
-// ── Add record ──
-window._fbAdd = async (rec) => {
-  try {
-    await addDoc(collection(db, COL), rec);
-    return true;
-  } catch(e){ console.error('fbAdd',e); return false; }
-};
-
-// ── Delete record ──
-window._fbDelete = async (docId) => {
-  try {
-    await deleteDoc(doc(db, COL, docId));
-    return true;
-  } catch(e){ console.error('fbDel',e); return false; }
-};
-
+window._badge = badge;
+window._fbAdd = async r => { try{ await addDoc(collection(db,COL),r); return true; }catch(e){ return false; } };
+window._fbDel = async id => { try{ await deleteDoc(doc(db,COL,id)); return true; }catch(e){ return false; } };
 window._fbReady = true;
 
-// ── REAL-TIME LISTENER — fires immediately on load + on every change ──
 document.addEventListener('DOMContentLoaded', () => {
-  updateDbBadge('sync');
-  const q = query(collection(db, COL), orderBy('tanggal','desc'));
-
-  onSnapshot(q,
-    (snap) => {
-      // Update localStorage with latest cloud data
-      const docs = snap.docs.map(d => ({...d.data(), _docId: d.id}));
+  badge('sync');
+  onSnapshot(
+    query(collection(db,COL), orderBy('tanggal','desc')),
+    snap => {
+      const docs = snap.docs.map(d=>({...d.data(), _docId:d.id}));
       localStorage.setItem('bmv3', JSON.stringify(docs));
-      updateDbBadge('ok');
-      // If rekap page is open, refresh it live
-      if(document.getElementById('page-rekap')?.classList.contains('active')){
-        if(typeof renderRekap === 'function') renderRekap();
-      }
+      badge('ok');
+      if(document.getElementById('page-rekap')?.classList.contains('active'))
+        typeof renderRekap==='function' && renderRekap();
     },
-    (err) => {
-      console.error('onSnapshot', err);
-      updateDbBadge('offline');
-    }
+    () => badge('off')
   );
 });
 </script>
 
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#0d1117;--surface:#161c26;--card:#1c2333;--border:#2a3348;
+  --bg:#0d1117;--surf:#161c26;--card:#1c2333;--bdr:#2a3348;
   --ob:#f97316;--mb:#3b82f6;--ng:#a855f7;--ok:#22c55e;--err:#ef4444;
-  --text:#e2e8f4;--muted:#7a8aa0;--radius:14px;
-  --nav-h:64px;
+  --tx:#e2e8f4;--mu:#7a8aa0;--r:14px;--nh:64px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;}
 
-/* ── TOP BAR ── */
-.topbar{
-  background:var(--surface);border-bottom:1px solid var(--border);
-  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
-  flex-shrink:0;
-}
+/* topbar */
+.topbar{background:var(--surf);border-bottom:1px solid var(--bdr);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;}
 .logo b{color:var(--ob);}
-.db-badge{font-size:11px;background:#22c55e18;color:var(--ok);border:1px solid #22c55e30;padding:4px 10px;border-radius:20px;font-weight:600;}
+.db-badge{font-size:11px;background:#22c55e18;color:var(--ok);border:1px solid #22c55e40;padding:4px 10px;border-radius:20px;font-weight:600;}
 
-/* ── SCROLL AREA ── */
-.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px calc(var(--nav-h) + 16px);}
+/* scroll */
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px calc(var(--nh) + 16px);}
 
-/* ── BOTTOM NAV ── */
-.bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);
-  background:var(--surface);border-top:1px solid var(--border);
-  display:flex;z-index:100;
-}
-.bnav-btn{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;border:none;background:none;cursor:pointer;
-  color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;
-  letter-spacing:.5px;transition:color .2s;padding:8px 4px;
-  border-top:3px solid transparent;
-}
-.bnav-btn .icon{font-size:22px;line-height:1;}
-.bnav-btn.ab{color:var(--ob);border-top-color:var(--ob);}
-.bnav-btn.am{color:var(--mb);border-top-color:var(--mb);}
-.bnav-btn.an{color:var(--ng);border-top-color:var(--ng);}
-.bnav-btn.ar{color:var(--ok);border-top-color:var(--ok);}
+/* bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:var(--nh);background:var(--surf);border-top:1px solid var(--bdr);display:flex;z-index:100;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;cursor:pointer;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.5px;border-top:3px solid transparent;transition:color .2s;}
+.nb .ic{font-size:22px;line-height:1;}
+.nb.ab{color:var(--ob);border-top-color:var(--ob);}
+.nb.am{color:var(--mb);border-top-color:var(--mb);}
+.nb.an{color:var(--ng);border-top-color:var(--ng);}
+.nb.ar{color:var(--ok);border-top-color:var(--ok);}
 
-/* ── PAGE ── */
-.page{display:none;}
-.page.active{display:block;}
-.pg-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;margin-bottom:16px;}
-.pg-title.ob{color:var(--ob);}
-.pg-title.mb{color:var(--mb);}
-.pg-title.ng{color:var(--ng);}
-.pg-title.ok{color:var(--ok);}
+/* page */
+.page{display:none;}.page.active{display:block;}
+.pg-ttl{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;margin-bottom:16px;}
+.ob{color:var(--ob);}.mb{color:var(--mb);}.ng{color:var(--ng);}.ok{color:var(--ok);}
 
-/* ── CARD ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
-.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+/* card */
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.clbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--mu);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr);}
 
-/* ── FORM ── */
+/* form */
 .fg{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
 .fg:last-child{margin-bottom:0;}
-.fg label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
-.fg input,.fg select{
-  background:var(--surface);border:1.5px solid var(--border);border-radius:10px;
-  color:var(--text);padding:13px 14px;font-family:'DM Sans',sans-serif;
-  font-size:16px;outline:none;transition:border .2s;width:100%;
-  -webkit-appearance:none;appearance:none;
-}
+.fg label{font-size:12px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;}
+.fg input,.fg select{background:var(--surf);border:1.5px solid var(--bdr);border-radius:10px;color:var(--tx);padding:13px 14px;font-family:'DM Sans',sans-serif;font-size:16px;outline:none;transition:border .2s;width:100%;-webkit-appearance:none;text-transform:uppercase;}
+.fg input::placeholder{text-transform:none;}
 .fg input:focus,.fg select:focus{border-color:var(--ob);}
 .fg input.b:focus{border-color:var(--mb);}
 .fg input.n:focus{border-color:var(--ng);}
 
-/* ── KA GRID ── */
+/* ka grid */
 .ka-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
-.ka-i label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px;}
-.ka-i input{
-  background:var(--surface);border:1.5px solid var(--border);border-radius:9px;
-  color:var(--text);padding:11px 8px;font-family:'DM Sans',sans-serif;
-  font-size:15px;outline:none;transition:border .2s;text-align:center;width:100%;
-}
+.ka-i label{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px;}
+.ka-i input{background:var(--surf);border:1.5px solid var(--bdr);border-radius:9px;color:var(--tx);padding:11px 8px;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border .2s;text-align:center;width:100%;}
 .ka-i input:focus{border-color:var(--ob);}
-.ka-avg-box{
-  background:var(--surface);border:1.5px solid var(--ob);border-radius:10px;
-  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
-}
+.ka-avg-box{background:var(--surf);border:1.5px solid var(--ob);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
 .ka-avg-box.ng{border-color:var(--ng);}
-.ka-avg-box label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.ka-avg-box span{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--ob);letter-spacing:1px;}
+.ka-avg-box label{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.ka-avg-box span{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--ob);}
 .ka-avg-box.ng span{color:var(--ng);}
 
-/* ── COUNTER ── */
-.counter-box{display:flex;flex-direction:column;align-items:center;padding:8px 0 12px;}
-.counter-row{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:10px;}
-.cbtn{
-  width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
-  font-size:32px;display:flex;align-items:center;justify-content:center;
-  transition:transform .1s;line-height:1;font-weight:700;
-}
-.cbtn:active{transform:scale(.90);}
+/* counter */
+.cbox{display:flex;flex-direction:column;align-items:center;padding:8px 0 12px;}
+.crow{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:10px;}
+.cbtn{width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;font-size:32px;display:flex;align-items:center;justify-content:center;transition:transform .1s;font-weight:700;}
+.cbtn:active{transform:scale(.9);}
 .cbtn.minus{background:#ef44441a;color:var(--err);border:2px solid #ef444435;}
 .cbtn.plus{background:#3b82f61a;color:var(--mb);border:2px solid #3b82f635;}
 .cval{font-family:'Bebas Neue',sans-serif;font-size:72px;line-height:1;min-width:120px;text-align:center;}
-.clabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.cbtns-row{display:flex;gap:8px;justify-content:center;}
-.csmall{
-  padding:8px 16px;border-radius:8px;background:var(--surface);
-  border:1px solid var(--border);color:var(--muted);
-  font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;
-  font-weight:600;transition:opacity .2s;
-}
-.csmall.red{color:var(--err);}
-.csmall:active{opacity:.7;}
+.clabel{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.cbtns{display:flex;gap:8px;justify-content:center;}
+.csm{padding:8px 16px;border-radius:8px;background:var(--surf);border:1px solid var(--bdr);color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;font-weight:600;}
+.csm.red{color:var(--err);}
+.csm:active{opacity:.7;}
 
-/* ── TOGGLE ── */
-.toggle-row{display:flex;gap:8px;margin-bottom:16px;}
-.tgl{
-  flex:1;padding:12px 8px;border-radius:10px;border:1.5px solid var(--border);
-  background:var(--surface);color:var(--muted);
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
-  cursor:pointer;text-transform:uppercase;letter-spacing:.8px;transition:all .2s;
-  text-align:center;
-}
+/* toggle */
+.trow{display:flex;gap:8px;margin-bottom:16px;}
+.tgl{flex:1;padding:12px 8px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--surf);color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.8px;transition:all .2s;text-align:center;}
 .tgl.am{background:#3b82f610;border-color:var(--mb);color:var(--mb);}
 .tgl.an{background:#a855f710;border-color:var(--ng);color:var(--ng);}
 
-/* ── ACTION BTNS ── */
+/* buttons */
 .btn-row{display:flex;gap:10px;margin-top:14px;}
-.btn{
-  flex:1;padding:15px 12px;border-radius:12px;border:none;
-  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;
-  cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.3px;
-}
+.btn{flex:1;padding:15px 12px;border-radius:12px;border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;}
 .btn:active{transform:scale(.97);}
 .btn-ob{background:var(--ob);color:#fff;}
 .btn-mb{background:var(--mb);color:#fff;}
 .btn-ng{background:var(--ng);color:#fff;}
 .btn-ok{background:var(--ok);color:#fff;}
-.btn-ghost{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+.btn-ghost{background:var(--surf);color:var(--mu);border:1px solid var(--bdr);}
 .btn-full{width:100%;margin-top:10px;}
 .btn:hover{opacity:.85;}
 
-/* ── NGEPOK SESI HEADER ── */
-.sesi-box{
-  background:linear-gradient(135deg,#1a1035 0%,#1c1530 100%);
-  border:1.5px solid #a855f730;border-radius:var(--radius);padding:16px;margin-bottom:14px;
-}
-.sesi-box-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--ng);margin-bottom:12px;}
+/* bongkar slot */
+.b-slot{background:var(--card);border:1.5px solid var(--bdr);border-radius:var(--r);margin-bottom:14px;overflow:hidden;}
+.b-slot-head{background:var(--surf);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--bdr);}
+.b-slot-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.b-slot-nopol{font-size:15px;font-weight:700;}
+.b-slot-sub{font-size:12px;color:var(--mu);}
+.b-slot-badge{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:1px;color:var(--ob);background:#f9731615;border:1px solid #f9731630;padding:4px 10px;border-radius:20px;}
+.b-slot-body{padding:14px;}
+.ka-set{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:10px;}
+.ka-set-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ka-set-num{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:1px;color:var(--ob);}
+.ka-set-avg{font-size:12px;font-weight:700;color:var(--ob);background:#f9731615;border:1px solid #f9731630;padding:5px 12px;border-radius:20px;}
+.ka-set-del{background:none;border:none;cursor:pointer;color:var(--err);font-size:16px;padding:2px 6px;}
+.btn-add-ka{width:100%;padding:11px;border-radius:9px;border:1.5px dashed var(--bdr);background:transparent;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;}
+.btn-add-ka:active{opacity:.6;}
+.no-slot{text-align:center;color:var(--mu);padding:24px 0 10px;font-size:13px;}
+
+/* ngepok sesi */
+.sesi-box{background:linear-gradient(135deg,#1a1035,#1c1530);border:1.5px solid #a855f730;border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.sesi-ttl{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--ng);margin-bottom:12px;}
 .sesi-stats{display:flex;gap:12px;flex-wrap:wrap;}
 .sstat{display:flex;flex-direction:column;gap:2px;}
-.sstat label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.sstat span{font-size:14px;font-weight:600;color:var(--text);}
+.sstat label{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.sstat span{font-size:14px;font-weight:600;}
 .sstat span.big{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--ng);}
 
-/* ── TK CARD ── */
+/* tk card */
 .tk-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
-.tk-c{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.tk-c{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:14px;}
 .tk-c-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.tk-c-num{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--ng);}
+.tk-num{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--ng);}
 .tk-c-nopol{font-size:13px;font-weight:700;}
 .tk-del{background:none;border:none;cursor:pointer;color:var(--err);font-size:18px;padding:4px 6px;}
-.tk-c-info{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
-.tk-c-info b{color:var(--text);}
-.no-tk{text-align:center;color:var(--muted);padding:20px;font-size:13px;border:1.5px dashed var(--border);border-radius:10px;}
-
-/* ── TK FORM ── */
-.tk-form{background:var(--surface);border:1.5px solid var(--ng);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.tk-c-info{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mu);}
+.tk-c-info b{color:var(--tx);}
+.no-tk{text-align:center;color:var(--mu);padding:20px;font-size:13px;border:1.5px dashed var(--bdr);border-radius:10px;}
+.tk-form{background:var(--surf);border:1.5px solid var(--ng);border-radius:var(--r);padding:16px;margin-bottom:14px;}
 .tk-form-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--ng);margin-bottom:14px;}
 
-/* ── REKAP KA DETAIL ── */
-.rek-ka-wrap{padding:10px 14px 4px;border-top:1px solid var(--border);}
-.rek-ka-set{margin-bottom:10px;}
-.rek-ka-set-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;}
-.rek-ka-row{display:flex;flex-wrap:wrap;gap:8px;}
-.rek-ka-item{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;min-width:56px;}
-.rek-ka-avg-item{border-color:var(--ob);background:#f9731610;}
-.rek-ka-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
-.rek-ka-val{font-size:16px;font-weight:700;color:var(--text);}
-.rek-ka-val.ob{color:var(--ob);}
-
-/* ══ REKAP ══ */
+/* rekap */
 .rek-filters{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
-.rek-filters select,.rek-filters input{
-  background:var(--surface);border:1.5px solid var(--border);border-radius:10px;
-  color:var(--text);padding:12px 14px;font-family:'DM Sans',sans-serif;
-  font-size:15px;outline:none;-webkit-appearance:none;appearance:none;width:100%;
-}
+.rek-filters select,.rek-filters input{background:var(--surf);border:1.5px solid var(--bdr);border-radius:10px;color:var(--tx);padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;width:100%;}
 .rek-filters .row2{display:flex;gap:10px;}
-.rek-filters .row2 input,.rek-filters .row2 select{flex:1;}
+.rek-filters .row2 input{flex:1;}
 .rek-list{display:flex;flex-direction:column;gap:10px;}
-.rek-c{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.rek-c{background:var(--card);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;}
 .rek-c-head{padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
 .rek-c-left{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
-.rek-c-type{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
 .badge-b{background:#f9731620;color:var(--ob);}
 .badge-m{background:#3b82f620;color:var(--mb);}
 .badge-ng{background:#a855f720;color:var(--ng);}
-.rek-c-title{font-size:15px;font-weight:700;color:var(--text);}
-.rek-c-sub{font-size:12px;color:var(--muted);}
+.rek-c-title{font-size:15px;font-weight:700;}
+.rek-c-sub{font-size:12px;color:var(--mu);}
 .rek-c-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
-.rek-c-karung{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);}
-.rek-c-karung span{font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif;}
-.rek-c-ka{font-size:12px;color:var(--muted);}
-.rek-c-meta{padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
-.rek-c-meta b{color:var(--text);}
-/* tk sub rows */
-.tk-subs{background:#a855f708;border-top:1px solid var(--border);}
-.tk-sub{padding:9px 14px 9px 22px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.rek-c-karung{font-family:'Bebas Neue',sans-serif;font-size:22px;}
+.rek-c-karung span{font-size:12px;color:var(--mu);font-family:'DM Sans',sans-serif;}
+.rek-c-ka{font-size:12px;color:var(--mu);}
+.rek-c-meta{padding:10px 14px;border-top:1px solid var(--bdr);background:var(--surf);display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu);}
+.rek-c-meta b{color:var(--tx);}
+.tk-subs{background:#a855f708;border-top:1px solid var(--bdr);}
+.tk-sub{padding:9px 14px 9px 22px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--mu);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .tk-sub:last-child{border-bottom:none;}
-.tk-sub b{color:var(--text);}
-.tk-num{font-family:'Bebas Neue',sans-serif;font-size:12px;color:var(--ng);min-width:28px;}
-.rek-c-actions{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
-.rek-del{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--err);font-size:12px;font-weight:600;cursor:pointer;}
-.rek-del:active{opacity:.7;}
-/* day divider */
-.day-div{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 4px 6px;border-top:1px solid var(--border);margin-top:8px;}
+.tk-sub b{color:var(--tx);}
+.day-div{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:1px;padding:10px 4px 6px;border-top:1px solid var(--bdr);margin-top:8px;}
 .day-div:first-child{border-top:none;margin-top:0;}
-.empty-state{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
-.rek-summary{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;}
+.empty-state{text-align:center;color:var(--mu);padding:40px 20px;font-size:14px;}
+.rek-summary{background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;}
 .rsum-s{display:flex;flex-direction:column;gap:2px;}
-.rsum-s label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.rsum-s span{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);}
+.rsum-s label{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.rsum-s span{font-family:'Bebas Neue',sans-serif;font-size:22px;}
+.rek-c-actions{padding:10px 14px;border-top:1px solid var(--bdr);display:flex;gap:8px;justify-content:flex-end;}
+.rek-del{padding:7px 14px;border-radius:8px;border:1px solid var(--bdr);background:var(--surf);color:var(--err);font-size:12px;font-weight:600;cursor:pointer;}
 
-/* ── BONGKAR SLOT ── */
-.b-slot{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
-.b-slot-head{background:var(--surface);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);}
-.b-slot-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
-.b-slot-nopol{font-size:15px;font-weight:700;color:var(--text);}
-.b-slot-sub{font-size:12px;color:var(--muted);}
-.b-slot-badge{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:1px;color:var(--ob);background:#f9731615;border:1px solid #f9731630;padding:4px 10px;border-radius:20px;white-space:nowrap;}
-.b-slot-body{padding:14px;}
-.ka-set{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
-.ka-set-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.ka-set-num{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:1px;color:var(--ob);}
-.ka-set-avg{font-size:12px;font-weight:700;color:var(--ob);background:#f9731615;border:1px solid #f9731630;padding:5px 12px;border-radius:20px;white-space:nowrap;}
-.ka-set-del{background:none;border:none;cursor:pointer;color:var(--err);font-size:16px;padding:2px 6px;}
-.btn-add-ka{width:100%;padding:11px;border-radius:9px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;transition:all .2s;}
-.btn-add-ka:active{opacity:.6;}
-.b-slot-avg-box{background:var(--bg);border:1.5px solid var(--ob);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.b-slot-avg-box label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.b-slot-avg-box span{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--ob);}
+/* ka rekap */
+.rek-ka-wrap{padding:10px 14px 4px;border-top:1px solid var(--bdr);}
+.rek-ka-set{margin-bottom:10px;}
+.rek-ka-row{display:flex;flex-wrap:wrap;gap:8px;}
+.rek-ka-item{display:flex;flex-direction:column;gap:2px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:7px 12px;min-width:56px;}
+.rek-ka-avg-item{border-color:var(--ob);background:#f9731610;}
+.rek-ka-lbl{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;}
+.rek-ka-val{font-size:16px;font-weight:700;}
+.rek-ka-val.ob{color:var(--ob);}
 
-/* ── TOAST ── */
-#toast{position:fixed;bottom:calc(var(--nav-h) + 20px);left:50%;transform:translateX(-50%) translateY(120px);background:#1c2333;color:var(--text);border:1px solid var(--border);padding:12px 20px;border-radius:30px;font-size:14px;font-weight:600;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;z-index:50;pointer-events:none;box-shadow:0 4px 20px #0009;white-space:nowrap;opacity:0;}
+/* toast */
+#toast{position:fixed;bottom:calc(var(--nh) + 20px);left:50%;transform:translateX(-50%) translateY(120px);background:var(--card);color:var(--tx);border:1px solid var(--bdr);padding:12px 20px;border-radius:30px;font-size:14px;font-weight:600;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;z-index:50;pointer-events:none;box-shadow:0 4px 20px #0009;white-space:nowrap;opacity:0;}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 #toast.ok{background:var(--ok);color:#fff;border-color:var(--ok);}
-#toast.warn{background:#1c2333;color:var(--ob);border:1.5px solid var(--ob);}
+#toast.warn{background:var(--card);color:var(--ob);border:1.5px solid var(--ob);}
 
-.fg input,.fg select,
-.ka-i input{
-  text-transform:uppercase;
-}
-.fg input::placeholder,.ka-i input::placeholder{
-  text-transform:none;
-}
-  .scroll-area{max-width:480px;margin:0 auto;}
-  .bottom-nav{max-width:480px;left:50%;transform:translateX(-50%);}
+@media(min-width:520px){
+  .scroll-area,.bnav{max-width:480px;left:50%;transform:translateX(-50%);}
+  .bnav{position:fixed;}
 }
 </style>
 </head>
@@ -352,27 +250,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 <div class="topbar">
   <div class="logo">UD. <b>Maju Lancar</b></div>
-  <div class="db-badge" id="db-badge">☁️ Cloud Aktif</div>
+  <div class="db-badge" id="db-badge">☁️ Live Sync</div>
 </div>
 
 <div class="scroll-area">
 
 <!-- ═══ BONGKAR ═══ -->
 <div class="page active" id="page-bongkar">
-  <div class="pg-title ob">⬇ Bongkar</div>
-
-  <!-- Slot truk aktif (paralel) -->
+  <div class="pg-ttl ob">⬇ Bongkar</div>
   <div id="b-slot-list"></div>
-
-  <!-- Tombol tambah truk -->
   <button class="btn btn-ob btn-full" id="b-add-btn" onclick="bAddTruk()">＋ Tambah Truk Bongkar</button>
-
-  <!-- Form input truk baru (hidden by default) -->
   <div id="b-form-wrap" style="display:none;margin-top:14px;">
     <div class="card" style="border-color:var(--ob);">
-      <div class="card-label" id="b-form-title" style="color:var(--ob);">Truk Baru</div>
+      <div class="clbl ob" id="b-form-title">Truk Baru</div>
       <div class="fg"><label>Nama Supplier</label><input type="text" id="b-supplier" placeholder="PT. Agro Jaya"/></div>
-      <div class="fg"><label>Nomor Polisi</label><input type="text" id="b-nopol" placeholder="B 1234 XYZ" autocapitalize="characters"/></div>
+      <div class="fg"><label>Nomor Polisi</label><input type="text" id="b-nopol" placeholder="B 1234 XYZ"/></div>
       <div class="fg"><label>Nama Sopir</label><input type="text" id="b-sopir" placeholder="Budi Santoso"/></div>
       <div class="fg"><label>Tanggal</label><input type="date" id="b-tanggal"/></div>
     </div>
@@ -385,10 +277,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 <!-- ═══ MUAT ═══ -->
 <div class="page" id="page-muat">
-  <div class="pg-title mb">⬆ Muat</div>
+  <div class="pg-ttl mb">⬆ Muat</div>
   <div class="card">
-    <div class="card-label">Jenis</div>
-    <div class="toggle-row">
+    <div class="clbl">Jenis</div>
+    <div class="trow">
       <button class="tgl am" id="tgl-muat" onclick="setJenis('muat')">📦 Muat</button>
       <button class="tgl" id="tgl-ngepok" onclick="setJenis('ngepok')">🧵 Ngepok</button>
     </div>
@@ -397,30 +289,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   <!-- MUAT BIASA -->
   <div id="sec-muat">
     <div class="card">
-      <div class="card-label">Data Kendaraan</div>
-      <div class="fg"><label>Nomor Polisi</label><input class="b" type="text" id="m-nopol" placeholder="B 5678 ABC" autocapitalize="characters"/></div>
+      <div class="clbl">Data Kendaraan</div>
+      <div class="fg"><label>Nomor Polisi</label><input class="b" type="text" id="m-nopol" placeholder="B 5678 ABC"/></div>
       <div class="fg"><label>Nama Sopir</label><input class="b" type="text" id="m-sopir" placeholder="Joko Widodo"/></div>
       <div class="fg"><label>Nama Ekspedisi</label><input class="b" type="text" id="m-ekspedisi" placeholder="JNE Freight"/></div>
       <div class="fg"><label>Tujuan</label><input class="b" type="text" id="m-tujuan" placeholder="Surabaya"/></div>
       <div class="fg"><label>Tanggal</label><input class="b" type="date" id="m-tanggal"/></div>
     </div>
     <div class="card">
-      <div class="card-label">Counter Karung</div>
-      <div class="counter-box">
-        <div class="counter-row">
+      <div class="clbl">Counter Karung</div>
+      <div class="cbox">
+        <div class="crow">
           <button class="cbtn minus" onclick="adj('m-karung',-1)">−</button>
-          <div style="text-align:center">
-            <div class="cval" id="m-karung">0</div>
-            <div class="clabel">Karung</div>
-          </div>
+          <div style="text-align:center"><div class="cval" id="m-karung">0</div><div class="clabel">Karung</div></div>
           <button class="cbtn plus" onclick="adj('m-karung',1)">+</button>
         </div>
-        <div class="cbtns-row">
-          <button class="csmall" onclick="adj('m-karung',-10)">−10</button>
-          <button class="csmall" onclick="adj('m-karung',-5)">−5</button>
-          <button class="csmall" onclick="adj('m-karung',5)">+5</button>
-          <button class="csmall" onclick="adj('m-karung',10)">+10</button>
-          <button class="csmall red" onclick="rst('m-karung')">Reset</button>
+        <div class="cbtns">
+          <button class="csm" onclick="adj('m-karung',-10)">−10</button>
+          <button class="csm" onclick="adj('m-karung',-5)">−5</button>
+          <button class="csm" onclick="adj('m-karung',5)">+5</button>
+          <button class="csm" onclick="adj('m-karung',10)">+10</button>
+          <button class="csm red" onclick="rst('m-karung')">Reset</button>
         </div>
       </div>
     </div>
@@ -432,10 +321,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
   <!-- NGEPOK -->
   <div id="sec-ngepok" style="display:none;">
-    <!-- Sesi aktif -->
     <div id="ng-aktif" style="display:none;">
       <div class="sesi-box">
-        <div class="sesi-box-title">🚛 Sesi Truk Besar</div>
+        <div class="sesi-ttl">🚛 Sesi Truk Besar</div>
         <div class="sesi-stats">
           <div class="sstat"><label>Nopol</label><span id="ng-i-nopol">—</span></div>
           <div class="sstat"><label>Sopir</label><span id="ng-i-sopir">—</span></div>
@@ -447,46 +335,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <div class="sstat"><label>Truk Kecil</label><span class="big" id="ng-total-n">0</span></div>
         </div>
       </div>
-
       <div class="card">
-        <div class="card-label">Daftar Truk Kecil</div>
+        <div class="clbl">Daftar Truk Kecil</div>
         <div class="tk-list" id="tk-list"></div>
         <button class="btn btn-ng btn-full" onclick="showTkForm()">＋ Tambah Truk Kecil</button>
       </div>
-
-      <!-- Form truk kecil -->
       <div class="tk-form" id="tk-form" style="display:none;">
         <div class="tk-form-title" id="tk-form-title">Truk Kecil #1</div>
-        <div class="fg"><label>Nomor Polisi</label><input class="n" type="text" id="tk-nopol" placeholder="D 1111 AA" autocapitalize="characters"/></div>
+        <div class="fg"><label>Nomor Polisi</label><input class="n" type="text" id="tk-nopol" placeholder="D 1111 AA"/></div>
         <div class="fg"><label>Nama Sopir</label><input class="n" type="text" id="tk-sopir" placeholder="Agus Salim"/></div>
         <div class="fg"><label>Nama Supplier</label><input class="n" type="text" id="tk-supplier" placeholder="PT. Agro Jaya"/></div>
         <div class="fg"><label>Netto (kg)</label><input class="n" type="number" id="tk-netto" placeholder="0" inputmode="decimal" step="0.01" oninput="previewNetto()"/></div>
-        <div class="card-label" style="margin:14px 0 10px;">Counter Karung</div>
-        <div class="counter-box">
-          <div class="counter-row">
+        <div class="clbl" style="margin:14px 0 10px;">Counter Karung</div>
+        <div class="cbox">
+          <div class="crow">
             <button class="cbtn minus" onclick="adj('tk-karung',-1)">−</button>
-            <div style="text-align:center">
-              <div class="cval" id="tk-karung">0</div>
-              <div class="clabel">Karung</div>
-            </div>
+            <div style="text-align:center"><div class="cval" id="tk-karung">0</div><div class="clabel">Karung</div></div>
             <button class="cbtn plus" onclick="adj('tk-karung',1)">+</button>
           </div>
-          <div class="cbtns-row">
-            <button class="csmall" onclick="adj('tk-karung',-10)">−10</button>
-            <button class="csmall" onclick="adj('tk-karung',-5)">−5</button>
-            <button class="csmall" onclick="adj('tk-karung',5)">+5</button>
-            <button class="csmall" onclick="adj('tk-karung',10)">+10</button>
-            <button class="csmall red" onclick="rst('tk-karung')">Reset</button>
+          <div class="cbtns">
+            <button class="csm" onclick="adj('tk-karung',-10)">−10</button>
+            <button class="csm" onclick="adj('tk-karung',-5)">−5</button>
+            <button class="csm" onclick="adj('tk-karung',5)">+5</button>
+            <button class="csm" onclick="adj('tk-karung',10)">+10</button>
+            <button class="csm red" onclick="rst('tk-karung')">Reset</button>
           </div>
         </div>
-        <div class="card-label" style="margin:14px 0 10px;">Data KA</div>
+        <div class="clbl" style="margin:14px 0 10px;">Data KA</div>
         <div class="ka-wrap">
-          <div class="ka-i"><label>KA 1</label><input type="number" id="tk-ka1" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
-          <div class="ka-i"><label>KA 2</label><input type="number" id="tk-ka2" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
-          <div class="ka-i"><label>KA 3</label><input type="number" id="tk-ka3" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
-          <div class="ka-i"><label>KA 4</label><input type="number" id="tk-ka4" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
-          <div class="ka-i"><label>KA 5</label><input type="number" id="tk-ka5" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
-          <div class="ka-i"><label>KA 6</label><input type="number" id="tk-ka6" placeholder="0" step="0.01" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 1</label><input type="number" id="tk-ka1" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 2</label><input type="number" id="tk-ka2" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 3</label><input type="number" id="tk-ka3" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 4</label><input type="number" id="tk-ka4" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 5</label><input type="number" id="tk-ka5" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
+          <div class="ka-i"><label>KA 6</label><input type="number" id="tk-ka6" placeholder="0" step="0.1" inputmode="decimal" oninput="hitungAvg('tk','tk-avg')"/></div>
         </div>
         <div class="ka-avg-box ng" style="margin-bottom:14px;"><label>Rata-rata KA</label><span id="tk-avg">—</span></div>
         <div class="btn-row" style="margin-top:0;">
@@ -494,18 +376,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <button class="btn btn-ghost" onclick="batalTkForm()">Batal</button>
         </div>
       </div>
-
       <div class="btn-row">
         <button class="btn btn-ok" onclick="selesaikanSesi()">✅ Selesaikan Sesi</button>
         <button class="btn btn-ghost" onclick="batalSesi()">✕ Batal</button>
       </div>
     </div>
-
-    <!-- Form mulai sesi -->
     <div id="ng-form-sesi">
       <div class="card">
-        <div class="card-label">Data Truk Besar</div>
-        <div class="fg"><label>Nomor Polisi</label><input class="n" type="text" id="ng-nopol" placeholder="B 1234 XYZ" autocapitalize="characters"/></div>
+        <div class="clbl">Data Truk Besar</div>
+        <div class="fg"><label>Nomor Polisi</label><input class="n" type="text" id="ng-nopol" placeholder="B 1234 XYZ"/></div>
         <div class="fg"><label>Nama Sopir</label><input class="n" type="text" id="ng-sopir" placeholder="Budi Santoso"/></div>
         <div class="fg"><label>Nama Ekspedisi</label><input class="n" type="text" id="ng-eks" placeholder="Ekspedisi Jaya"/></div>
         <div class="fg"><label>Tujuan</label><input class="n" type="text" id="ng-tuj" placeholder="Medan"/></div>
@@ -518,8 +397,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 <!-- ═══ REKAP ═══ -->
 <div class="page" id="page-rekap">
-  <div class="pg-title ok">📋 Rekap</div>
-
+  <div class="pg-ttl ok">📋 Rekap</div>
   <div class="rek-filters">
     <select id="f-jenis" onchange="renderRekap()">
       <option value="">Semua Jenis</option>
@@ -528,13 +406,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <option value="ngepok">Ngepok</option>
     </select>
     <div class="row2">
-      <input type="date" id="f-dari" onchange="renderRekap()" placeholder="Dari"/>
-      <input type="date" id="f-sampai" onchange="renderRekap()" placeholder="Sampai"/>
+      <input type="date" id="f-dari" onchange="renderRekap()"/>
+      <input type="date" id="f-sampai" onchange="renderRekap()"/>
     </div>
-    <input type="search" id="f-cari" oninput="renderRekap()" placeholder="🔍 Cari nopol / sopir / ekspedisi..."/>
+    <input type="search" id="f-cari" oninput="renderRekap()" placeholder="🔍 Cari nopol / sopir..."/>
     <button class="btn btn-ok" style="padding:14px;" onclick="exportCSV()">⬇ Export CSV</button>
   </div>
-
   <div id="rek-summary" class="rek-summary" style="display:none;">
     <div class="rsum-s"><label>Transaksi</label><span id="rs-total">0</span></div>
     <div class="rsum-s"><label>Total Karung</label><span id="rs-karung">0</span></div>
@@ -542,151 +419,110 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="rsum-s"><label>Muat</label><span id="rs-m">0</span></div>
     <div class="rsum-s"><label>Ngepok</label><span id="rs-n">0</span></div>
   </div>
-
   <div id="rek-list"></div>
 </div>
 
 </div><!-- scroll-area -->
 
-<!-- ── BOTTOM NAV ── -->
-<nav class="bottom-nav">
-  <button class="bnav-btn ab" id="bnav-bongkar" onclick="showPage('bongkar',this,'ab')">
-    <span class="icon">⬇</span>BONGKAR
-  </button>
-  <button class="bnav-btn" id="bnav-muat" onclick="showPage('muat',this,'am')">
-    <span class="icon">⬆</span>MUAT
-  </button>
-  <button class="bnav-btn" id="bnav-rekap" onclick="showPage('rekap',this,'ar')">
-    <span class="icon">📋</span>REKAP
-  </button>
+<nav class="bnav">
+  <button class="nb ab" id="nb-bongkar" onclick="showPage('bongkar',this,'ab')"><span class="ic">⬇</span>BONGKAR</button>
+  <button class="nb" id="nb-muat" onclick="showPage('muat',this,'am')"><span class="ic">⬆</span>MUAT</button>
+  <button class="nb" id="nb-rekap" onclick="showPage('rekap',this,'ar')"><span class="ic">📋</span>REKAP</button>
 </nav>
 
-<div id="toast">✅ Tersimpan!</div>
+<div id="toast"></div>
 
 <script>
-// ═══ STORAGE (Firebase primary + localStorage cache) ═══
+// ═══ STORAGE ═══
 const KEY='bmv3';
-const getData=()=>{ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch{ return []; }};
+const getData=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[];}catch{return [];}};
 const setData=d=>localStorage.setItem(KEY,JSON.stringify(d));
 
-// Save to Firebase + localStorage
 async function saveRec(rec){
-  // Save to localStorage immediately (fast)
   const d=getData(); d.unshift(rec); setData(d);
-  // Save to Firebase in background
   if(window._fbReady){
-    window._updateDbBadge('sync');
-    const ok = await window._fbAdd(rec);
-    if(ok){
-      // Refresh from Firestore so _docId is populated
-      const docs = await window._fbGetAll();
-      if(docs!==null){ setData(docs); }
-      window._updateDbBadge('ok');
-    } else {
-      window._updateDbBadge('offline');
-    }
+    window._badge('sync');
+    await window._fbAdd(rec);
+    window._badge('ok');
   }
 }
-
-// Delete from Firebase + localStorage
 async function deleteRec(id){
   const d=getData();
   const rec=d.find(r=>r.id===id);
-  // Delete from localStorage
   setData(d.filter(r=>r.id!==id));
-  // Delete from Firestore
   if(window._fbReady && rec?._docId){
-    window._updateDbBadge('sync');
-    await window._fbDelete(rec._docId);
-    window._updateDbBadge('ok');
+    window._badge('sync');
+    await window._fbDel(rec._docId);
+    window._badge('ok');
   }
 }
 
 // ═══ STATE ═══
-let jenisMuat='muat';
-let ngSesi=null;
+let jenisMuat='muat', ngSesi=null, bSlots=[];
 
 // ═══ NAV ═══
 function showPage(id,btn,cls){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.bnav-btn').forEach(b=>b.className='bnav-btn');
+  document.querySelectorAll('.nb').forEach(b=>b.className='nb');
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add(cls);
   document.querySelector('.scroll-area').scrollTop=0;
   if(id==='rekap') renderRekap();
 }
 
-// ═══ COUNTER ═══
-function adj(id,n){
-  const el=document.getElementById(id);
-  el.textContent=Math.max(0,(parseInt(el.textContent)||0)+n);
-}
-function rst(id){ document.getElementById(id).textContent='0'; }
-function cval(id){ return parseInt(document.getElementById(id).textContent)||0; }
-
-// ═══ KA AVG ═══
-function hitungAvg(pfx,outId){
-  const vals=[1,2,3,4,5,6].map(i=>parseFloat(document.getElementById(`${pfx}-ka${i}`)?.value)||0);
+// ═══ UTILS ═══
+const today=()=>new Date().toISOString().split('T')[0];
+const fmtDate=d=>{if(!d)return'—';const p=d.split('-');return`${p[2]}/${p[1]}/${p[0]}`;};
+const clearKA=p=>[1,2,3,4,5,6].forEach(i=>{const e=document.getElementById(`${p}-ka${i}`);if(e)e.value='';});
+function adj(id,n){const e=document.getElementById(id);e.textContent=Math.max(0,(parseInt(e.textContent)||0)+n);}
+function rst(id){document.getElementById(id).textContent='0';}
+function cval(id){return parseInt(document.getElementById(id).textContent)||0;}
+function hitungAvg(p,outId){
+  const vals=[1,2,3,4,5,6].map(i=>parseFloat(document.getElementById(`${p}-ka${i}`)?.value)||0);
   const f=vals.filter(v=>v>0);
   const avg=f.length?(f.reduce((a,b)=>a+b,0)/f.length).toFixed(1):null;
   document.getElementById(outId).textContent=avg?avg+'%':'—';
 }
-function kaVals(pfx){ return [1,2,3,4,5,6].map(i=>parseFloat(document.getElementById(`${pfx}-ka${i}`)?.value)||0); }
-function kaAvg(ka){ const f=ka.filter(v=>v>0); return f.length?parseFloat((f.reduce((a,b)=>a+b,0)/f.length).toFixed(1)):null; }
-
-// ═══ TOAST ═══
+const kaVals=p=>[1,2,3,4,5,6].map(i=>parseFloat(document.getElementById(`${p}-ka${i}`)?.value)||0);
+const kaAvg=ka=>{const f=ka.filter(v=>v>0);return f.length?parseFloat((f.reduce((a,b)=>a+b,0)/f.length).toFixed(1)):null;};
 function toast(msg,type='ok'){
   const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.className='show '+(type==='warn'?'warn':'ok');
-  clearTimeout(t._timer);
-  t._timer=setTimeout(()=>{ t.className=''; },2400);
+  t.textContent=msg; t.className='show '+type;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='',2400);
 }
-
-// ═══ UTILS ═══
-const today=()=>new Date().toISOString().split('T')[0];
-function fmtDate(d){ if(!d) return '—'; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
-function clearKA(pfx){ [1,2,3,4,5,6].forEach(i=>{ const el=document.getElementById(`${pfx}-ka${i}`); if(el) el.value=''; }); }
-
-// ══════════════════════ BONGKAR (PARALEL + MULTI KA) ══════════════════════
-// slot: { id, supplier, nopol, sopir, tanggal,
-//   kaSets: [ { ka:[0,0,0,0,0,0], karung:null }, ... ] }
-let bSlots = [];
-
-function bKASetAvg(set) {
-  const f = set.ka.filter(v => v > 0);
-  return f.length ? parseFloat((f.reduce((a,b)=>a+b,0)/f.length).toFixed(1)) : null;
-}
-
-function bRenderAll() {
-  const wrap = document.getElementById('b-slot-list');
-  if (!bSlots.length) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 0 10px;font-size:13px;">Belum ada truk aktif. Tap tombol di bawah untuk menambah.</div>';
-    return;
+// force uppercase
+document.addEventListener('input',e=>{
+  if(e.target.tagName==='INPUT'&&e.target.type==='text'){
+    const p=e.target.selectionStart; e.target.value=e.target.value.toUpperCase(); e.target.setSelectionRange(p,p);
   }
-  wrap.innerHTML = bSlots.map((slot, si) => {
-    const kaSetsHtml = slot.kaSets.map((set, ki) => {
-      const avg = bKASetAvg(set);
-      const inputs = set.ka.map((v,i) => `
-        <div class="ka-i">
-          <label>KA ${i+1}</label>
-          <input type="number" value="${v||''}" placeholder="0" step="0.1" inputmode="decimal"
-            oninput="bUpdateKA(${si},${ki},${i},this.value)"/>
-        </div>`).join('');
+});
+
+// ════════════════ BONGKAR ════════════════
+const bKAAvg=set=>{const f=set.ka.filter(v=>v>0);return f.length?parseFloat((f.reduce((a,b)=>a+b,0)/f.length).toFixed(1)):null;};
+
+function bRenderAll(){
+  const wrap=document.getElementById('b-slot-list');
+  if(!bSlots.length){wrap.innerHTML='<div class="no-slot">Belum ada truk aktif. Tap tombol di bawah.</div>';return;}
+  wrap.innerHTML=bSlots.map((slot,si)=>{
+    const kaSetsHtml=slot.kaSets.map((set,ki)=>{
+      const avg=bKAAvg(set);
+      const inputs=set.ka.map((v,i)=>`
+        <div class="ka-i"><label>KA ${i+1}</label>
+        <input type="number" value="${v||''}" placeholder="0" step="0.1" inputmode="decimal" oninput="bUpdateKA(${si},${ki},${i},this.value)"/></div>`).join('');
       return `<div class="ka-set" id="kaset-${slot.id}-${ki}">
         <div class="ka-set-head">
           <span class="ka-set-num">Set KA #${ki+1}</span>
           <div style="display:flex;align-items:center;gap:8px;">
-            ${avg !== null ? `<span class="ka-set-avg" id="kaavg-${slot.id}-${ki}">Rata-rata: ${avg}%</span>` : `<span class="ka-set-avg" id="kaavg-${slot.id}-${ki}" style="display:none"></span>`}
-            ${slot.kaSets.length > 1 ? `<button class="ka-set-del" onclick="bDelKASet(${si},${ki})">🗑</button>` : ''}
+            <span class="ka-set-avg" id="kaavg-${slot.id}-${ki}" ${avg===null?'style="display:none"':''}>
+              ${avg!==null?'Rata-rata: '+avg+'%':''}
+            </span>
+            ${slot.kaSets.length>1?`<button class="ka-set-del" onclick="bDelKASet(${si},${ki})">🗑</button>`:''}
           </div>
         </div>
         <div class="ka-wrap">${inputs}</div>
         <div class="fg" style="margin-top:10px;margin-bottom:0;">
-          <label>Jumlah Karung <span style="color:var(--muted);font-weight:400;font-size:10px;">(opsional)</span></label>
-          <input type="number" value="${set.karung||''}" placeholder="Kosongkan jika tidak ada"
-            inputmode="numeric" style="font-size:15px;"
-            oninput="bUpdateKarung(${si},${ki},this.value)"/>
+          <label>Jumlah Karung <span style="color:var(--mu);font-weight:400;font-size:10px;">(opsional)</span></label>
+          <input type="number" value="${set.karung||''}" placeholder="Kosongkan jika tidak ada" inputmode="numeric" style="font-size:15px;text-transform:none;" oninput="bUpdateKarung(${si},${ki},this.value)"/>
         </div>
       </div>`;
     }).join('');
@@ -701,7 +537,7 @@ function bRenderAll() {
       <div class="b-slot-body">
         ${kaSetsHtml}
         <button class="btn-add-ka" onclick="bAddKASet(${si})">＋ Tambah Set KA</button>
-        <div class="btn-row" style="margin-top:4px;">
+        <div class="btn-row" style="margin-top:0;">
           <button class="btn btn-ob" onclick="bSelesaikan(${si})">✅ Selesai & Simpan</button>
           <button class="btn btn-ghost" onclick="bBatalSlot(${si})">✕ Batal</button>
         </div>
@@ -710,105 +546,64 @@ function bRenderAll() {
   }).join('');
 }
 
-function bAddTruk() {
-  document.getElementById('b-form-wrap').style.display = 'block';
-  document.getElementById('b-add-btn').style.display = 'none';
-  document.getElementById('b-form-title').textContent = `Truk Bongkar #${bSlots.length + 1}`;
-  ['b-supplier','b-nopol','b-sopir'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('b-tanggal').value = today();
+function bAddTruk(){
+  document.getElementById('b-form-wrap').style.display='block';
+  document.getElementById('b-add-btn').style.display='none';
+  document.getElementById('b-form-title').textContent=`Truk Bongkar #${bSlots.length+1}`;
+  ['b-supplier','b-nopol','b-sopir'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-tanggal').value=today();
   document.getElementById('b-nopol').focus();
-  document.getElementById('b-form-wrap').scrollIntoView({behavior:'smooth', block:'start'});
 }
-function bBatalForm() {
-  document.getElementById('b-form-wrap').style.display = 'none';
-  document.getElementById('b-add-btn').style.display = 'block';
+function bBatalForm(){
+  document.getElementById('b-form-wrap').style.display='none';
+  document.getElementById('b-add-btn').style.display='block';
 }
-function bMasukkanTruk() {
-  const nopol = document.getElementById('b-nopol').value.trim();
-  const sopir = document.getElementById('b-sopir').value.trim();
-  if (!nopol || !sopir) { toast('⚠️ Nopol & Sopir wajib!', 'warn'); return; }
-  const slot = {
-    id: Date.now(),
-    supplier: document.getElementById('b-supplier').value.trim(),
-    nopol, sopir,
-    tanggal: document.getElementById('b-tanggal').value || today(),
-    kaSets: [{ ka:[0,0,0,0,0,0], karung:null }]
-  };
-  bSlots.push(slot);
-  bBatalForm();
-  bRenderAll();
+function bMasukkanTruk(){
+  const nopol=document.getElementById('b-nopol').value.trim();
+  const sopir=document.getElementById('b-sopir').value.trim();
+  if(!nopol||!sopir){toast('⚠️ Nopol & Sopir wajib!','warn');return;}
+  bSlots.push({id:Date.now(),supplier:document.getElementById('b-supplier').value.trim(),
+    nopol,sopir,tanggal:document.getElementById('b-tanggal').value||today(),
+    kaSets:[{ka:[0,0,0,0,0,0],karung:null}]});
+  bBatalForm(); bRenderAll();
   toast(`✅ Truk ${nopol} masuk antrian!`);
 }
-
-function bUpdateKA(si, ki, idx, val) {
-  if (!bSlots[si]?.kaSets[ki]) return;
-  bSlots[si].kaSets[ki].ka[idx] = parseFloat(val) || 0;
-  // update only this set's avg in DOM — no re-render
-  const avg = bKASetAvg(bSlots[si].kaSets[ki]);
-  const avgEl = document.getElementById(`kaavg-${bSlots[si].id}-${ki}`);
-  if (avgEl) {
-    avgEl.textContent = avg !== null ? 'Rata-rata: '+avg+'%' : '';
-    avgEl.style.display = avg !== null ? '' : 'none';
-  }
+function bUpdateKA(si,ki,idx,val){
+  if(!bSlots[si]?.kaSets[ki]) return;
+  bSlots[si].kaSets[ki].ka[idx]=parseFloat(val)||0;
+  const avg=bKAAvg(bSlots[si].kaSets[ki]);
+  const el=document.getElementById(`kaavg-${bSlots[si].id}-${ki}`);
+  if(el){el.textContent=avg!==null?'Rata-rata: '+avg+'%':''; el.style.display=avg!==null?'':'none';}
 }
-
-function bUpdateKarung(si, ki, val) {
-  if (!bSlots[si]?.kaSets[ki]) return;
-  bSlots[si].kaSets[ki].karung = parseInt(val) || null;
-}
-
-function bAddKASet(si) {
-  if (!bSlots[si]) return;
-  bSlots[si].kaSets.push({ ka:[0,0,0,0,0,0], karung:null });
+function bUpdateKarung(si,ki,val){if(bSlots[si]?.kaSets[ki])bSlots[si].kaSets[ki].karung=parseInt(val)||null;}
+function bAddKASet(si){
+  if(!bSlots[si]) return;
+  bSlots[si].kaSets.push({ka:[0,0,0,0,0,0],karung:null});
   bRenderAll();
-  setTimeout(() => {
-    const slotEl = document.getElementById(`bslot-${bSlots[si].id}`);
-    if (slotEl) {
-      const sets = slotEl.querySelectorAll('.ka-set');
-      sets[sets.length-1]?.scrollIntoView({behavior:'smooth', block:'nearest'});
-    }
-  }, 80);
+  setTimeout(()=>{
+    const sets=document.getElementById(`bslot-${bSlots[si].id}`)?.querySelectorAll('.ka-set');
+    sets?.[sets.length-1]?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },80);
 }
-
-function bDelKASet(si, ki) {
-  if (!bSlots[si] || bSlots[si].kaSets.length <= 1) return;
-  if (!confirm('Hapus set KA ini?')) return;
-  bSlots[si].kaSets.splice(ki, 1);
-  bRenderAll();
+function bDelKASet(si,ki){
+  if(!bSlots[si]||bSlots[si].kaSets.length<=1) return;
+  if(!confirm('Hapus set KA ini?')) return;
+  bSlots[si].kaSets.splice(ki,1); bRenderAll();
 }
-
-function bSelesaikan(si) {
-  const slot = bSlots[si];
-  if (!slot) return;
-  if (!confirm(`Simpan bongkaran truk ${slot.nopol}?`)) return;
-  // store kaSets with individual avg per set — NO accumulated avg
-  const kaSetsStored = slot.kaSets.map(set => ({
-    ka: set.ka,
-    karung: set.karung,
-    avg: bKASetAvg(set)
-  }));
-  const rec = {
-    id: slot.id, jenis:'bongkar', tanggal: slot.tanggal,
-    supplier: slot.supplier, nopol: slot.nopol, sopir: slot.sopir,
-    ka_avg: null,  // no single avg — per set only
-    kaSets: kaSetsStored,
-    karung: null, ekspedisi:'', tujuan:'', trukKecil:[], netto:null
-  };
-  const d = getData(); d.unshift(rec); setData(d);
-  bSlots.splice(si, 1);
-  bRenderAll();
+function bSelesaikan(si){
+  const slot=bSlots[si]; if(!slot) return;
+  if(!confirm(`Simpan bongkaran truk ${slot.nopol}?`)) return;
+  const kaSetsStored=slot.kaSets.map(set=>({ka:set.ka,karung:set.karung,avg:bKAAvg(set)}));
+  const rec={id:slot.id,jenis:'bongkar',tanggal:slot.tanggal,
+    supplier:slot.supplier,nopol:slot.nopol,sopir:slot.sopir,
+    ka_avg:null,kaSets:kaSetsStored,karung:null,ekspedisi:'',tujuan:'',trukKecil:[],netto:null};
+  bSlots.splice(si,1); bRenderAll();
   toast(`✅ Bongkar ${slot.nopol} disimpan!`);
-  saveRec(rec).then(()=>{ bRenderAll(); });
+  saveRec(rec);
 }
+function bBatalSlot(si){if(!confirm('Batalkan truk ini?'))return; bSlots.splice(si,1); bRenderAll();}
 
-function bBatalSlot(si) {
-  if (!confirm('Batalkan truk ini dari antrian?')) return;
-  bSlots.splice(si, 1);
-  bRenderAll();
-}
-
-
-// ══════════════════════ MUAT ══════════════════════
+// ════════════════ MUAT ════════════════
 function setJenis(j){
   jenisMuat=j;
   document.getElementById('tgl-muat').className='tgl'+(j==='muat'?' am':'');
@@ -819,59 +614,48 @@ function setJenis(j){
 function simpanMuat(){
   const nopol=document.getElementById('m-nopol').value.trim();
   const sopir=document.getElementById('m-sopir').value.trim();
-  if(!nopol||!sopir){ toast('⚠️ Nopol & Sopir wajib diisi!','warn'); return; }
-  const rec={
-    id:Date.now(), jenis:'muat',
-    tanggal:document.getElementById('m-tanggal').value||today(),
-    nopol, sopir,
-    ekspedisi:document.getElementById('m-ekspedisi').value.trim(),
-    tujuan:document.getElementById('m-tujuan').value.trim(),
-    karung:cval('m-karung'),
-    supplier:'', ka1:0,ka2:0,ka3:0,ka4:0,ka5:0,ka6:0, ka_avg:null, trukKecil:[]
-  };
-  const d=getData(); d.unshift(rec); setData(d);
-  toast('✅ Muat disimpan!');
-  kosongkanMuat();
-  saveRec(rec);
+  if(!nopol||!sopir){toast('⚠️ Nopol & Sopir wajib!','warn');return;}
+  const rec={id:Date.now(),jenis:'muat',tanggal:document.getElementById('m-tanggal').value||today(),
+    nopol,sopir,ekspedisi:document.getElementById('m-ekspedisi').value.trim(),
+    tujuan:document.getElementById('m-tujuan').value.trim(),karung:cval('m-karung'),
+    supplier:'',ka_avg:null,trukKecil:[],netto:null};
+  toast('✅ Muat disimpan!'); kosongkanMuat(); saveRec(rec);
 }
 function kosongkanMuat(){
   ['m-nopol','m-sopir','m-ekspedisi','m-tujuan'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('m-tanggal').value=today();
-  rst('m-karung');
+  document.getElementById('m-tanggal').value=today(); rst('m-karung');
 }
 
-// ══════════════════════ NGEPOK SESI ══════════════════════
+// ════════════════ NGEPOK SESI ════════════════
 function mulaiSesi(){
   const nopol=document.getElementById('ng-nopol').value.trim();
   const sopir=document.getElementById('ng-sopir').value.trim();
   const eks=document.getElementById('ng-eks').value.trim();
-  const tuj=document.getElementById('ng-tuj').value.trim();
-  if(!nopol||!sopir){ toast('⚠️ Nopol & Sopir truk besar wajib!','warn'); return; }
-  if(!eks){ toast('⚠️ Nama Ekspedisi wajib!','warn'); return; }
-  ngSesi={ id:Date.now(), nopol, sopir, ekspedisi:eks, tujuan:tuj,
-    tanggal:document.getElementById('ng-tgl').value||today(), trukKecil:[] };
+  if(!nopol||!sopir){toast('⚠️ Nopol & Sopir wajib!','warn');return;}
+  if(!eks){toast('⚠️ Ekspedisi wajib!','warn');return;}
+  ngSesi={id:Date.now(),nopol,sopir,ekspedisi:eks,
+    tujuan:document.getElementById('ng-tuj').value.trim(),
+    tanggal:document.getElementById('ng-tgl').value||today(),trukKecil:[]};
   document.getElementById('ng-form-sesi').style.display='none';
   document.getElementById('ng-aktif').style.display='block';
   updateSesiHdr(); renderTkList();
 }
 function updateSesiHdr(){
   if(!ngSesi) return;
-  document.getElementById('ng-i-nopol').textContent=ngSesi.nopol||'—';
-  document.getElementById('ng-i-sopir').textContent=ngSesi.sopir||'—';
+  document.getElementById('ng-i-nopol').textContent=ngSesi.nopol;
+  document.getElementById('ng-i-sopir').textContent=ngSesi.sopir;
   document.getElementById('ng-i-eks').textContent=ngSesi.ekspedisi;
   document.getElementById('ng-i-tuj').textContent=ngSesi.tujuan||'—';
   document.getElementById('ng-i-tgl').textContent=fmtDate(ngSesi.tanggal);
-  const tot=ngSesi.trukKecil.reduce((s,t)=>s+(t.karung||0),0);
-  const totNetto=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
-  document.getElementById('ng-total-k').textContent=tot;
-  document.getElementById('ng-total-netto').textContent=totNetto.toLocaleString('id-ID')+' kg';
+  const totK=ngSesi.trukKecil.reduce((s,t)=>s+(t.karung||0),0);
+  const totN=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
+  document.getElementById('ng-total-k').textContent=totK;
+  document.getElementById('ng-total-netto').textContent=totN.toLocaleString('id-ID')+' kg';
   document.getElementById('ng-total-n').textContent=ngSesi.trukKecil.length;
 }
 function renderTkList(){
   const wrap=document.getElementById('tk-list');
-  if(!ngSesi||!ngSesi.trukKecil.length){
-    wrap.innerHTML='<div class="no-tk">Belum ada truk kecil.</div>'; return;
-  }
+  if(!ngSesi?.trukKecil.length){wrap.innerHTML='<div class="no-tk">Belum ada truk kecil.</div>';return;}
   wrap.innerHTML=ngSesi.trukKecil.map((tk,i)=>`
     <div class="tk-c">
       <div class="tk-c-head">
@@ -884,7 +668,7 @@ function renderTkList(){
         <span>Supplier: <b>${tk.supplier||'—'}</b></span>
         <span>Karung: <b>${tk.karung}</b></span>
         <span>Netto: <b>${tk.netto?tk.netto.toLocaleString('id-ID')+' kg':'—'}</b></span>
-        <span>Avg KA: <b>${tk.ka_avg?tk.ka_avg+'%':'—'}</b></span>
+        <span>KA: <b>${tk.ka_avg?tk.ka_avg+'%':'—'}</b></span>
       </div>
     </div>`).join('');
 }
@@ -895,26 +679,24 @@ function showTkForm(){
   ['tk-nopol','tk-sopir','tk-supplier','tk-netto'].forEach(id=>document.getElementById(id).value='');
   rst('tk-karung'); clearKA('tk');
   document.getElementById('tk-avg').textContent='—';
-  document.getElementById('tk-nopol').focus();
   document.getElementById('tk-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function previewNetto(){
-  // live update total netto in sesi header while typing
   if(!ngSesi) return;
-  const input=parseFloat(document.getElementById('tk-netto').value)||0;
-  const existingNetto=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
-  const preview=existingNetto+input;
-  document.getElementById('ng-total-netto').textContent=preview.toLocaleString('id-ID')+' kg';
+  const inp=parseFloat(document.getElementById('tk-netto').value)||0;
+  const ex=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
+  document.getElementById('ng-total-netto').textContent=(ex+inp).toLocaleString('id-ID')+' kg';
 }
-function batalTkForm(){ document.getElementById('tk-form').style.display='none'; updateSesiHdr(); }
+function batalTkForm(){document.getElementById('tk-form').style.display='none'; updateSesiHdr();}
 function simpanTk(){
   const nopol=document.getElementById('tk-nopol').value.trim();
   const sopir=document.getElementById('tk-sopir').value.trim();
-  if(!nopol||!sopir){ toast('⚠️ Nopol & Sopir TK wajib!','warn'); return; }
+  if(!nopol||!sopir){toast('⚠️ Nopol & Sopir TK wajib!','warn');return;}
   const ka=kaVals('tk');
-  const netto=parseFloat(document.getElementById('tk-netto').value)||0;
-  const supplier=document.getElementById('tk-supplier').value.trim();
-  ngSesi.trukKecil.push({nopol,sopir,supplier,netto,karung:cval('tk-karung'),
+  ngSesi.trukKecil.push({nopol,sopir,
+    supplier:document.getElementById('tk-supplier').value.trim(),
+    netto:parseFloat(document.getElementById('tk-netto').value)||0,
+    karung:cval('tk-karung'),
     ka1:ka[0],ka2:ka[1],ka3:ka[2],ka4:ka[3],ka5:ka[4],ka6:ka[5],ka_avg:kaAvg(ka)});
   document.getElementById('tk-form').style.display='none';
   updateSesiHdr(); renderTkList();
@@ -925,25 +707,20 @@ function hapusTk(i){
   ngSesi.trukKecil.splice(i,1); updateSesiHdr(); renderTkList();
 }
 function selesaikanSesi(){
-  if(!ngSesi?.trukKecil.length){ toast('⚠️ Tambah minimal 1 truk kecil!','warn'); return; }
+  if(!ngSesi?.trukKecil.length){toast('⚠️ Tambah minimal 1 truk kecil!','warn');return;}
   if(!confirm('Selesaikan dan simpan sesi ngepok?')) return;
   const totK=ngSesi.trukKecil.reduce((s,t)=>s+(t.karung||0),0);
-  const totNetto=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
+  const totN=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
   const avgs=ngSesi.trukKecil.filter(t=>t.ka_avg).map(t=>t.ka_avg);
-  const avgGab=avgs.length?parseFloat((avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(2)):null;
+  const avgGab=avgs.length?parseFloat((avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)):null;
   const rec={id:ngSesi.id,jenis:'ngepok',tanggal:ngSesi.tanggal,
-    nopol:ngSesi.nopol, sopir:ngSesi.sopir,
-    ekspedisi:ngSesi.ekspedisi,tujuan:ngSesi.tujuan,karung:totK,netto:totNetto,ka_avg:avgGab,
+    nopol:ngSesi.nopol,sopir:ngSesi.sopir,ekspedisi:ngSesi.ekspedisi,
+    tujuan:ngSesi.tujuan,karung:totK,netto:totN,ka_avg:avgGab,
     trukKecil:ngSesi.trukKecil,supplier:''};
-  const d=getData(); d.unshift(rec); setData(d);
   toast(`✅ Sesi disimpan! ${ngSesi.trukKecil.length} TK, ${totK} karung`);
-  resetSesi();
-  saveRec(rec);
+  resetSesi(); saveRec(rec);
 }
-function batalSesi(){
-  if(!confirm('Batalkan sesi? Data hilang.')) return;
-  resetSesi();
-}
+function batalSesi(){if(!confirm('Batalkan sesi? Data hilang.')) return; resetSesi();}
 function resetSesi(){
   ngSesi=null;
   document.getElementById('ng-aktif').style.display='none';
@@ -953,7 +730,7 @@ function resetSesi(){
   document.getElementById('tk-form').style.display='none';
 }
 
-// ══════════════════════ REKAP ══════════════════════
+// ════════════════ REKAP ════════════════
 function getFiltered(){
   let d=getData();
   const jenis=document.getElementById('f-jenis').value;
@@ -966,16 +743,11 @@ function getFiltered(){
   if(cari) d=d.filter(r=>[r.nopol,r.sopir,r.supplier,r.ekspedisi,r.tujuan].join(' ').toLowerCase().includes(cari));
   return d;
 }
-
 function renderRekap(){
   const d=getFiltered();
   const wrap=document.getElementById('rek-list');
   const sumBox=document.getElementById('rek-summary');
-  if(!d.length){
-    wrap.innerHTML='<div class="empty-state">Tidak ada data ditemukan.</div>';
-    sumBox.style.display='none'; return;
-  }
-  // Summary
+  if(!d.length){wrap.innerHTML='<div class="empty-state">Tidak ada data.</div>';sumBox.style.display='none';return;}
   const totK=d.reduce((s,r)=>s+(r.karung||0),0);
   document.getElementById('rs-total').textContent=d.length;
   document.getElementById('rs-karung').textContent=totK;
@@ -983,12 +755,9 @@ function renderRekap(){
   document.getElementById('rs-m').textContent=d.filter(r=>r.jenis==='muat').length;
   document.getElementById('rs-n').textContent=d.filter(r=>r.jenis==='ngepok').length;
   sumBox.style.display='flex';
-
-  // Group by date
   const byDate={};
-  d.forEach(r=>{ if(!byDate[r.tanggal]) byDate[r.tanggal]=[]; byDate[r.tanggal].push(r); });
+  d.forEach(r=>{if(!byDate[r.tanggal])byDate[r.tanggal]=[];byDate[r.tanggal].push(r);});
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-
   let html='<div class="rek-list">';
   dates.forEach(tgl=>{
     html+=`<div class="day-div">📅 ${fmtDate(tgl)} — ${byDate[tgl].length} transaksi</div>`;
@@ -997,41 +766,39 @@ function renderRekap(){
       const label=r.jenis==='bongkar'?'Bongkar':r.jenis==='ngepok'?'Ngepok':'Muat';
       const pihak=r.jenis==='bongkar'?(r.supplier||'—'):(r.ekspedisi||'—');
       const mainInfo=r.jenis==='bongkar'?r.nopol:pihak;
-      const sub2=r.jenis==='bongkar'?`${r.sopir} · ${r.supplier||'—'}`:`${r.nopol!=='(multi)'?r.nopol+' · ':'' }${r.sopir!=='(multi)'?r.sopir:''} → ${r.tujuan||'—'}`;
+      const sub2=r.jenis==='bongkar'?`${r.sopir} · ${r.supplier||'—'}`:`${r.nopol} · ${r.sopir} → ${r.tujuan||'—'}`;
+      // right side
+      const rightKA=r.jenis==='bongkar'&&r.kaSets?.length>1?`<div class="rek-c-ka">${r.kaSets.length} Set KA</div>`
+        :r.jenis==='bongkar'&&r.kaSets?.length===1&&r.kaSets[0].avg?`<div class="rek-c-ka">KA: ${r.kaSets[0].avg}%</div>`
+        :r.ka_avg?`<div class="rek-c-ka">KA: ${r.ka_avg}%</div>`:'';
       html+=`<div class="rek-c">
         <div class="rek-c-head">
           <div class="rek-c-left">
-            <div class="rek-c-type"><span class="badge ${badge}">${label}</span></div>
+            <span class="badge ${badge}">${label}</span>
             <div class="rek-c-title">${mainInfo}</div>
             <div class="rek-c-sub">${sub2}</div>
           </div>
           <div class="rek-c-right">
-            ${r.karung!==null&&r.karung!==undefined?`<div class="rek-c-karung">${r.karung} <span>krg</span></div>`:''}
+            ${r.karung!=null?`<div class="rek-c-karung">${r.karung} <span>krg</span></div>`:''}
             ${r.netto?`<div class="rek-c-ka">Netto: ${r.netto.toLocaleString('id-ID')} kg</div>`:''}
-            ${r.jenis==='bongkar'&&r.kaSets?.length>1?`<div class="rek-c-ka">${r.kaSets.length} Set KA</div>`
-              :r.jenis==='bongkar'&&r.kaSets?.length===1&&r.kaSets[0].avg?`<div class="rek-c-ka">KA: ${r.kaSets[0].avg}%</div>`
-              :r.ka_avg?`<div class="rek-c-ka">KA: ${r.ka_avg}%</div>`:''}
+            ${rightKA}
           </div>
         </div>`;
-      // KA rekap (bongkar) — rata-rata per set saja
-      if(r.jenis==='bongkar'&&r.kaSets&&r.kaSets.length){
+      // bongkar KA sets
+      if(r.jenis==='bongkar'&&r.kaSets?.length){
         const setsHtml=r.kaSets.map((set,i)=>{
           const avgTxt=set.avg?`<span class="rek-ka-item rek-ka-avg-item"><span class="rek-ka-lbl">Rata-rata Set ${i+1}</span><span class="rek-ka-val ob">${set.avg}%</span></span>`:'';
-          const karungTxt=set.karung?`<span class="rek-ka-item"><span class="rek-ka-lbl">Karung</span><span class="rek-ka-val">${set.karung}</span></span>`:'';
-          return avgTxt||karungTxt ? `<div class="rek-ka-row" style="margin-bottom:6px;">${avgTxt}${karungTxt}</div>` : '';
+          const krTxt=set.karung?`<span class="rek-ka-item"><span class="rek-ka-lbl">Karung</span><span class="rek-ka-val">${set.karung}</span></span>`:'';
+          return avgTxt||krTxt?`<div class="rek-ka-row" style="margin-bottom:6px;">${avgTxt}${krTxt}</div>`:'';
         }).join('');
         if(setsHtml) html+=`<div class="rek-ka-wrap">${setsHtml}</div>`;
-      } else if(r.jenis==='bongkar'&&r.ka_avg){
-        html+=`<div class="rek-ka-wrap"><div class="rek-ka-row"><span class="rek-ka-item rek-ka-avg-item"><span class="rek-ka-lbl">Rata-rata KA</span><span class="rek-ka-val ob">${r.ka_avg}%</span></span></div></div>`;
       }
-      // Truk kecil rows (ngepok)
+      // ngepok truk kecil
       if(r.jenis==='ngepok'&&r.trukKecil?.length){
         html+=`<div class="tk-subs">`;
         r.trukKecil.forEach((tk,i)=>{
           html+=`<div class="tk-sub">
-            <span class="tk-num">TK#${i+1}</span>
-            <b>${tk.nopol}</b>
-            <span>${tk.sopir}</span>
+            <span class="tk-num">TK#${i+1}</span><b>${tk.nopol}</b><span>${tk.sopir}</span>
             ${tk.supplier?`<span>📦 ${tk.supplier}</span>`:''}
             <span><b>${tk.karung}</b> krg</span>
             ${tk.netto?`<span>Netto: <b>${tk.netto.toLocaleString('id-ID')} kg</b></span>`:''}
@@ -1040,55 +807,43 @@ function renderRekap(){
         });
         html+=`</div>`;
       }
-      html+=`<div class="rek-c-actions">
-        <button class="rek-del" onclick="hapusRec(${r.id})">🗑 Hapus</button>
-      </div></div>`;
+      html+=`<div class="rek-c-actions"><button class="rek-del" onclick="hapusRec(${r.id})">🗑 Hapus</button></div></div>`;
     });
   });
   html+='</div>';
   wrap.innerHTML=html;
 }
-
 function hapusRec(id){
   if(!confirm('Hapus transaksi ini?')) return;
-  deleteRec(id).then(()=>renderRekap());
-  renderRekap();
+  deleteRec(id); renderRekap();
 }
-
 function exportCSV(){
   const d=getFiltered();
-  if(!d.length){ toast('⚠️ Tidak ada data!','warn'); return; }
+  if(!d.length){toast('⚠️ Tidak ada data!','warn');return;}
   const rows=[['Tanggal','Jenis','Sub','Ekspedisi/Supplier','Tujuan','Nopol','Sopir','Karung','Netto(kg)','KA1','KA2','KA3','KA4','KA5','KA6','AvgKA']];
   d.forEach(r=>{
-    if(r.jenis==='bongkar'&&r.kaSets&&r.kaSets.length>1){
-      // one CSV row per KA set
+    if(r.jenis==='bongkar'&&r.kaSets?.length>1){
       r.kaSets.forEach((set,i)=>{
-        const f=set.filter(v=>v>0);
+        const f=set.ka?.filter(v=>v>0)||[];
         const avg=f.length?parseFloat((f.reduce((a,b)=>a+b,0)/f.length).toFixed(1)):null;
-        rows.push([r.tanggal,'bongkar',`KASet-${i+1}`,r.supplier||'','',r.nopol,r.sopir,'','',set[0]||'',set[1]||'',set[2]||'',set[3]||'',set[4]||'',set[5]||'',avg||'']);
+        rows.push([r.tanggal,'bongkar',`KASet-${i+1}`,r.supplier||'','',r.nopol,r.sopir,'','',
+          ...(set.ka||[0,0,0,0,0,0]).map(v=>v||''),avg||'']);
       });
     } else {
-      rows.push([r.tanggal,r.jenis,'induk',r.jenis==='bongkar'?r.supplier:r.ekspedisi,r.tujuan||'',r.nopol,r.sopir,r.karung??'',r.netto??'',r.ka1||'',r.ka2||'',r.ka3||'',r.ka4||'',r.ka5||'',r.ka6||'',r.ka_avg||'']);
+      rows.push([r.tanggal,r.jenis,'induk',r.jenis==='bongkar'?r.supplier:r.ekspedisi,
+        r.tujuan||'',r.nopol,r.sopir,r.karung??'',r.netto??'',
+        r.ka1||'',r.ka2||'',r.ka3||'',r.ka4||'',r.ka5||'',r.ka6||'',r.ka_avg||'']);
     }
-    r.trukKecil?.forEach((tk,i)=>rows.push([r.tanggal,'ngepok',`TK-${i+1}`,tk.supplier||'','',tk.nopol,tk.sopir,tk.karung,tk.netto||'',tk.ka1||'',tk.ka2||'',tk.ka3||'',tk.ka4||'',tk.ka5||'',tk.ka6||'',tk.ka_avg||'']));
+    r.trukKecil?.forEach((tk,i)=>rows.push([r.tanggal,'ngepok',`TK-${i+1}`,
+      tk.supplier||'','',tk.nopol,tk.sopir,tk.karung,tk.netto||'',
+      tk.ka1||'',tk.ka2||'',tk.ka3||'',tk.ka4||'',tk.ka5||'',tk.ka6||'',tk.ka_avg||'']));
   });
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`bongkarmuat_${today()}.csv`;
-  a.click();
+  a.download=`bongkarmuat_${today()}.csv`; a.click();
   toast('✅ CSV diekspor!');
 }
-
-// ═══ FORCE UPPERCASE ALL TEXT INPUTS ═══
-document.addEventListener('input', e => {
-  const el = e.target;
-  if (el.tagName === 'INPUT' && el.type === 'text') {
-    const pos = el.selectionStart;
-    el.value = el.value.toUpperCase();
-    el.setSelectionRange(pos, pos);
-  }
-});
 
 // ═══ INIT ═══
 document.getElementById('b-tanggal').value=today();
