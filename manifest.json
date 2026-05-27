@@ -2,7 +2,7 @@
   "name": "UD. Maju Lancar — Bongkar Muat",
   "short_name": "Maju Lancar",
   "description": "Aplikasi Bongkar Muat UD. Maju Lancar",
-  "start_url": "./bongkar-muat.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
