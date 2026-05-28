@@ -565,7 +565,7 @@ function bMasukkanTruk(){
   bSlots.push({id:Date.now(),supplier:document.getElementById('b-supplier').value.trim(),
     nopol,sopir,tanggal:document.getElementById('b-tanggal').value||today(),
     kaSets:[{ka:[0,0,0,0,0,0],karung:null}]});
-  bBatalForm(); bRenderAll();
+  bBatalForm(); saveDraftBS(); bRenderAll();
   toast(`✅ Truk ${nopol} masuk antrian!`);
 }
 function bUpdateKA(si,ki,idx,val){
@@ -574,12 +574,13 @@ function bUpdateKA(si,ki,idx,val){
   const avg=bKAAvg(bSlots[si].kaSets[ki]);
   const el=document.getElementById(`kaavg-${bSlots[si].id}-${ki}`);
   if(el){el.textContent=avg!==null?'Rata-rata: '+avg+'%':''; el.style.display=avg!==null?'':'none';}
+  saveDraftBS();
 }
-function bUpdateKarung(si,ki,val){if(bSlots[si]?.kaSets[ki])bSlots[si].kaSets[ki].karung=parseInt(val)||null;}
+function bUpdateKarung(si,ki,val){if(bSlots[si]?.kaSets[ki]){bSlots[si].kaSets[ki].karung=parseInt(val)||null; saveDraftBS();}}
 function bAddKASet(si){
   if(!bSlots[si]) return;
   bSlots[si].kaSets.push({ka:[0,0,0,0,0,0],karung:null});
-  bRenderAll();
+  saveDraftBS(); bRenderAll();
   setTimeout(()=>{
     const sets=document.getElementById(`bslot-${bSlots[si].id}`)?.querySelectorAll('.ka-set');
     sets?.[sets.length-1]?.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -588,7 +589,7 @@ function bAddKASet(si){
 function bDelKASet(si,ki){
   if(!bSlots[si]||bSlots[si].kaSets.length<=1) return;
   if(!confirm('Hapus set KA ini?')) return;
-  bSlots[si].kaSets.splice(ki,1); bRenderAll();
+  bSlots[si].kaSets.splice(ki,1); saveDraftBS(); bRenderAll();
 }
 function bSelesaikan(si){
   const slot=bSlots[si]; if(!slot) return;
@@ -597,11 +598,11 @@ function bSelesaikan(si){
   const rec={id:slot.id,jenis:'bongkar',tanggal:slot.tanggal,
     supplier:slot.supplier,nopol:slot.nopol,sopir:slot.sopir,
     ka_avg:null,kaSets:kaSetsStored,karung:null,ekspedisi:'',tujuan:'',trukKecil:[],netto:null};
-  bSlots.splice(si,1); bRenderAll();
+  bSlots.splice(si,1); saveDraftBS(); bRenderAll();
   toast(`✅ Bongkar ${slot.nopol} disimpan!`);
   saveRec(rec);
 }
-function bBatalSlot(si){if(!confirm('Batalkan truk ini?'))return; bSlots.splice(si,1); bRenderAll();}
+function bBatalSlot(si){if(!confirm('Batalkan truk ini?'))return; bSlots.splice(si,1); saveDraftBS(); bRenderAll();}
 
 // ════════════════ MUAT ════════════════
 function setJenis(j){
@@ -626,6 +627,13 @@ function kosongkanMuat(){
   document.getElementById('m-tanggal').value=today(); rst('m-karung');
 }
 
+// ═══ PERSIST DRAFT (ngSesi & bSlots) ═══
+const DRAFT_NG  = 'bmv3_ng_draft';
+const DRAFT_BS  = 'bmv3_bs_draft';
+const saveDraftNG  = () => localStorage.setItem(DRAFT_NG, JSON.stringify(ngSesi));
+const clearDraftNG = () => localStorage.removeItem(DRAFT_NG);
+const saveDraftBS  = () => localStorage.setItem(DRAFT_BS, JSON.stringify(bSlots));
+
 // ════════════════ NGEPOK SESI ════════════════
 function mulaiSesi(){
   const nopol=document.getElementById('ng-nopol').value.trim();
@@ -638,7 +646,7 @@ function mulaiSesi(){
     tanggal:document.getElementById('ng-tgl').value||today(),trukKecil:[]};
   document.getElementById('ng-form-sesi').style.display='none';
   document.getElementById('ng-aktif').style.display='block';
-  updateSesiHdr(); renderTkList();
+  saveDraftNG(); updateSesiHdr(); renderTkList();
 }
 function updateSesiHdr(){
   if(!ngSesi) return;
@@ -699,12 +707,12 @@ function simpanTk(){
     karung:cval('tk-karung'),
     ka1:ka[0],ka2:ka[1],ka3:ka[2],ka4:ka[3],ka5:ka[4],ka6:ka[5],ka_avg:kaAvg(ka)});
   document.getElementById('tk-form').style.display='none';
-  updateSesiHdr(); renderTkList();
+  saveDraftNG(); updateSesiHdr(); renderTkList();
   toast(`✅ TK #${ngSesi.trukKecil.length} ditambahkan!`);
 }
 function hapusTk(i){
   if(!confirm('Hapus truk kecil ini?')) return;
-  ngSesi.trukKecil.splice(i,1); updateSesiHdr(); renderTkList();
+  ngSesi.trukKecil.splice(i,1); saveDraftNG(); updateSesiHdr(); renderTkList();
 }
 function selesaikanSesi(){
   if(!ngSesi?.trukKecil.length){toast('⚠️ Tambah minimal 1 truk kecil!','warn');return;}
@@ -718,9 +726,9 @@ function selesaikanSesi(){
     tujuan:ngSesi.tujuan,karung:totK,netto:totN,ka_avg:avgGab,
     trukKecil:ngSesi.trukKecil,supplier:''};
   toast(`✅ Sesi disimpan! ${ngSesi.trukKecil.length} TK, ${totK} karung`);
-  resetSesi(); saveRec(rec);
+  clearDraftNG(); resetSesi(); saveRec(rec);
 }
-function batalSesi(){if(!confirm('Batalkan sesi? Data hilang.')) return; resetSesi();}
+function batalSesi(){if(!confirm('Batalkan sesi? Data hilang.')) return; clearDraftNG(); resetSesi();}
 function resetSesi(){
   ngSesi=null;
   document.getElementById('ng-aktif').style.display='none';
@@ -849,7 +857,27 @@ function exportCSV(){
 document.getElementById('b-tanggal').value=today();
 document.getElementById('m-tanggal').value=today();
 document.getElementById('ng-tgl').value=today();
+
+// Restore bSlots draft
+try {
+  const bs = JSON.parse(localStorage.getItem(DRAFT_BS));
+  if(bs?.length) bSlots = bs;
+} catch(e){}
 bRenderAll();
+
+// Restore ngSesi draft
+try {
+  const ng = JSON.parse(localStorage.getItem(DRAFT_NG));
+  if(ng?.id){
+    ngSesi = ng;
+    // Switch to ngepok mode and show active sesi
+    setJenis('ngepok');
+    document.getElementById('ng-form-sesi').style.display='none';
+    document.getElementById('ng-aktif').style.display='block';
+    updateSesiHdr(); renderTkList();
+    toast('📋 Sesi ngepok sebelumnya dipulihkan!');
+  }
+} catch(e){}
 </script>
 </body>
 </html>
