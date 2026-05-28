@@ -332,14 +332,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);displ
           <div class="sstat"><label>Tanggal</label><span id="ng-i-tgl">—</span></div>
           <div class="sstat"><label>Total Karung</label><span class="big" id="ng-total-k">0</span></div>
           <div class="sstat"><label>Total Netto</label><span class="big" id="ng-total-netto">0</span></div>
-          <div class="sstat"><label>Truk Kecil</label><span class="big" id="ng-total-n">0</span></div>
+          <div class="sstat"><label>TK Ngepok</label><span class="big" id="ng-total-n">0</span></div>
+          <div class="sstat"><label>Muat Gudang</label><span class="big" id="ng-total-mg">0</span></div>
         </div>
       </div>
+
+      <!-- Daftar semua entri (TK ngepok + muat gudang) -->
       <div class="card">
-        <div class="clbl">Daftar Truk Kecil</div>
+        <div class="clbl">Daftar Muatan</div>
         <div class="tk-list" id="tk-list"></div>
-        <button class="btn btn-ng btn-full" onclick="showTkForm()">＋ Tambah Truk Kecil</button>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button class="btn btn-ng" style="flex:1;" onclick="showTkForm()">🧵 + TK Ngepok</button>
+          <button class="btn btn-mb" style="flex:1;" onclick="showMgForm()">🏭 + Muat Gudang</button>
+        </div>
       </div>
+
+      <!-- Form truk kecil ngepok -->
       <div class="tk-form" id="tk-form" style="display:none;">
         <div class="tk-form-title" id="tk-form-title">Truk Kecil #1</div>
         <div class="fg"><label>Nomor Polisi</label><input class="n" type="text" id="tk-nopol" placeholder="D 1111 AA"/></div>
@@ -372,10 +380,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);displ
         </div>
         <div class="ka-avg-box ng" style="margin-bottom:14px;"><label>Rata-rata KA</label><span id="tk-avg">—</span></div>
         <div class="btn-row" style="margin-top:0;">
-          <button class="btn btn-ng" onclick="simpanTk()">✓ Simpan Truk Kecil</button>
+          <button class="btn btn-ng" onclick="simpanTk()">✓ Simpan TK Ngepok</button>
           <button class="btn btn-ghost" onclick="batalTkForm()">Batal</button>
         </div>
       </div>
+
+      <!-- Form muat gudang -->
+      <div class="tk-form" id="mg-form" style="display:none;border-color:var(--mb);">
+        <div class="tk-form-title" style="color:var(--mb);" id="mg-form-title">Muat Gudang #1</div>
+        <div class="clbl" style="margin:0 0 10px;">Counter Karung</div>
+        <div class="cbox">
+          <div class="crow">
+            <button class="cbtn minus" onclick="adj('mg-karung',-1)">−</button>
+            <div style="text-align:center"><div class="cval" id="mg-karung">0</div><div class="clabel">Karung</div></div>
+            <button class="cbtn plus" onclick="adj('mg-karung',1)">+</button>
+          </div>
+          <div class="cbtns">
+            <button class="csm" onclick="adj('mg-karung',-10)">−10</button>
+            <button class="csm" onclick="adj('mg-karung',-5)">−5</button>
+            <button class="csm" onclick="adj('mg-karung',5)">+5</button>
+            <button class="csm" onclick="adj('mg-karung',10)">+10</button>
+            <button class="csm red" onclick="rst('mg-karung')">Reset</button>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn btn-mb" onclick="simpanMG()">✓ Simpan Muat Gudang</button>
+          <button class="btn btn-ghost" onclick="batalMgForm()">Batal</button>
+        </div>
+      </div>
+
       <div class="btn-row">
         <button class="btn btn-ok" onclick="selesaikanSesi()">✅ Selesaikan Sesi</button>
         <button class="btn btn-ghost" onclick="batalSesi()">✕ Batal</button>
@@ -643,7 +676,8 @@ function mulaiSesi(){
   if(!eks){toast('⚠️ Ekspedisi wajib!','warn');return;}
   ngSesi={id:Date.now(),nopol,sopir,ekspedisi:eks,
     tujuan:document.getElementById('ng-tuj').value.trim(),
-    tanggal:document.getElementById('ng-tgl').value||today(),trukKecil:[]};
+    tanggal:document.getElementById('ng-tgl').value||today(),
+    trukKecil:[], muatGudang:[]};
   document.getElementById('ng-form-sesi').style.display='none';
   document.getElementById('ng-aktif').style.display='block';
   saveDraftNG(); updateSesiHdr(); renderTkList();
@@ -655,19 +689,24 @@ function updateSesiHdr(){
   document.getElementById('ng-i-eks').textContent=ngSesi.ekspedisi;
   document.getElementById('ng-i-tuj').textContent=ngSesi.tujuan||'—';
   document.getElementById('ng-i-tgl').textContent=fmtDate(ngSesi.tanggal);
-  const totK=ngSesi.trukKecil.reduce((s,t)=>s+(t.karung||0),0);
-  const totN=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
+  const tks=ngSesi.trukKecil||[];
+  const mgs=ngSesi.muatGudang||[];
+  const totK=tks.reduce((s,t)=>s+(t.karung||0),0)+mgs.reduce((s,m)=>s+(m.karung||0),0);
+  const totN=tks.reduce((s,t)=>s+(t.netto||0),0);
   document.getElementById('ng-total-k').textContent=totK;
   document.getElementById('ng-total-netto').textContent=totN.toLocaleString('id-ID')+' kg';
-  document.getElementById('ng-total-n').textContent=ngSesi.trukKecil.length;
+  document.getElementById('ng-total-n').textContent=tks.length;
+  document.getElementById('ng-total-mg').textContent=mgs.length;
 }
 function renderTkList(){
   const wrap=document.getElementById('tk-list');
-  if(!ngSesi?.trukKecil.length){wrap.innerHTML='<div class="no-tk">Belum ada truk kecil.</div>';return;}
-  wrap.innerHTML=ngSesi.trukKecil.map((tk,i)=>`
+  const tks=ngSesi?.trukKecil||[];
+  const mgs=ngSesi?.muatGudang||[];
+  if(!tks.length&&!mgs.length){wrap.innerHTML='<div class="no-tk">Belum ada muatan. Tap tombol di bawah.</div>';return;}
+  const tkRows=tks.map((tk,i)=>`
     <div class="tk-c">
       <div class="tk-c-head">
-        <span class="tk-num">TK #${i+1}</span>
+        <span class="tk-num" style="color:var(--ng);">🧵 TK #${i+1}</span>
         <span class="tk-c-nopol">${tk.nopol}</span>
         <button class="tk-del" onclick="hapusTk(${i})">🗑</button>
       </div>
@@ -679,6 +718,18 @@ function renderTkList(){
         <span>KA: <b>${tk.ka_avg?tk.ka_avg+'%':'—'}</b></span>
       </div>
     </div>`).join('');
+  const mgRows=mgs.map((mg,i)=>`
+    <div class="tk-c" style="border-color:#3b82f630;">
+      <div class="tk-c-head">
+        <span class="tk-num" style="color:var(--mb);">🏭 MG #${i+1}</span>
+        <span class="tk-c-nopol" style="color:var(--mb);">Muat Gudang</span>
+        <button class="tk-del" onclick="hapusMG(${i})">🗑</button>
+      </div>
+      <div class="tk-c-info">
+        <span>Karung: <b>${mg.karung}</b></span>
+      </div>
+    </div>`).join('');
+  wrap.innerHTML=tkRows+mgRows;
 }
 function showTkForm(){
   const n=(ngSesi?.trukKecil.length||0)+1;
@@ -714,18 +765,46 @@ function hapusTk(i){
   if(!confirm('Hapus truk kecil ini?')) return;
   ngSesi.trukKecil.splice(i,1); saveDraftNG(); updateSesiHdr(); renderTkList();
 }
+
+// ── Muat Gudang ──
+function showMgForm(){
+  const n=(ngSesi?.muatGudang?.length||0)+1;
+  document.getElementById('mg-form-title').textContent=`Muat Gudang #${n}`;
+  document.getElementById('mg-form').style.display='block';
+  document.getElementById('tk-form').style.display='none';
+  rst('mg-karung');
+  document.getElementById('mg-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function batalMgForm(){ document.getElementById('mg-form').style.display='none'; }
+function simpanMG(){
+  const karung=cval('mg-karung');
+  if(!karung){ toast('⚠️ Jumlah karung wajib diisi!','warn'); return; }
+  if(!ngSesi.muatGudang) ngSesi.muatGudang=[];
+  ngSesi.muatGudang.push({karung});
+  batalMgForm(); saveDraftNG(); updateSesiHdr(); renderTkList();
+  toast(`✅ Muat Gudang #${ngSesi.muatGudang.length} disimpan!`);
+}
+function hapusMG(i){
+  if(!confirm('Hapus muat gudang ini?')) return;
+  ngSesi.muatGudang.splice(i,1); saveDraftNG(); updateSesiHdr(); renderTkList();
+}
 function selesaikanSesi(){
-  if(!ngSesi?.trukKecil.length){toast('⚠️ Tambah minimal 1 truk kecil!','warn');return;}
-  if(!confirm('Selesaikan dan simpan sesi ngepok?')) return;
-  const totK=ngSesi.trukKecil.reduce((s,t)=>s+(t.karung||0),0);
-  const totN=ngSesi.trukKecil.reduce((s,t)=>s+(t.netto||0),0);
-  const avgs=ngSesi.trukKecil.filter(t=>t.ka_avg).map(t=>t.ka_avg);
+  const tks=ngSesi?.trukKecil||[];
+  const mgs=ngSesi?.muatGudang||[];
+  if(!tks.length&&!mgs.length){toast('⚠️ Tambah minimal 1 muatan!','warn');return;}
+  if(!confirm('Selesaikan dan simpan sesi?')) return;
+  const totKtk=tks.reduce((s,t)=>s+(t.karung||0),0);
+  const totKmg=mgs.reduce((s,m)=>s+(m.karung||0),0);
+  const totK=totKtk+totKmg;
+  const totN=tks.reduce((s,t)=>s+(t.netto||0),0);
+  const avgs=tks.filter(t=>t.ka_avg).map(t=>t.ka_avg);
   const avgGab=avgs.length?parseFloat((avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)):null;
   const rec={id:ngSesi.id,jenis:'ngepok',tanggal:ngSesi.tanggal,
     nopol:ngSesi.nopol,sopir:ngSesi.sopir,ekspedisi:ngSesi.ekspedisi,
-    tujuan:ngSesi.tujuan,karung:totK,netto:totN,ka_avg:avgGab,
-    trukKecil:ngSesi.trukKecil,supplier:''};
-  toast(`✅ Sesi disimpan! ${ngSesi.trukKecil.length} TK, ${totK} karung`);
+    tujuan:ngSesi.tujuan,karung:totK,karungNgepok:totKtk,karungGudang:totKmg,
+    netto:totN,ka_avg:avgGab,
+    trukKecil:tks, muatGudang:mgs, supplier:''};
+  toast(`✅ Sesi disimpan! ${tks.length} TK ngepok + ${mgs.length} muat gudang = ${totK} karung`);
   clearDraftNG(); resetSesi(); saveRec(rec);
 }
 function batalSesi(){if(!confirm('Batalkan sesi? Data hilang.')) return; clearDraftNG(); resetSesi();}
@@ -801,19 +880,36 @@ function renderRekap(){
         }).join('');
         if(setsHtml) html+=`<div class="rek-ka-wrap">${setsHtml}</div>`;
       }
-      // ngepok truk kecil
-      if(r.jenis==='ngepok'&&r.trukKecil?.length){
-        html+=`<div class="tk-subs">`;
-        r.trukKecil.forEach((tk,i)=>{
-          html+=`<div class="tk-sub">
-            <span class="tk-num">TK#${i+1}</span><b>${tk.nopol}</b><span>${tk.sopir}</span>
-            ${tk.supplier?`<span>📦 ${tk.supplier}</span>`:''}
-            <span><b>${tk.karung}</b> krg</span>
-            ${tk.netto?`<span>Netto: <b>${tk.netto.toLocaleString('id-ID')} kg</b></span>`:''}
-            ${tk.ka_avg?`<span>KA: <b>${tk.ka_avg}%</b></span>`:''}
+      // ngepok detail rows
+      if(r.jenis==='ngepok'){
+        if(r.trukKecil?.length||r.muatGudang?.length){
+          html+=`<div class="tk-subs">`;
+          (r.trukKecil||[]).forEach((tk,i)=>{
+            html+=`<div class="tk-sub">
+              <span class="tk-num" style="color:var(--ng);">🧵TK#${i+1}</span>
+              <b>${tk.nopol}</b><span>${tk.sopir}</span>
+              ${tk.supplier?`<span>📦 ${tk.supplier}</span>`:''}
+              <span><b>${tk.karung}</b> krg</span>
+              ${tk.netto?`<span>Netto: <b>${tk.netto.toLocaleString('id-ID')} kg</b></span>`:''}
+              ${tk.ka_avg?`<span>KA: <b>${tk.ka_avg}%</b></span>`:''}
+            </div>`;
+          });
+          (r.muatGudang||[]).forEach((mg,i)=>{
+            html+=`<div class="tk-sub" style="background:#3b82f608;">
+              <span class="tk-num" style="color:var(--mb);">🏭MG#${i+1}</span>
+              <span style="color:var(--mb);font-weight:600;">Muat Gudang</span>
+              <span><b>${mg.karung}</b> krg</span>
+            </div>`;
+          });
+          html+=`</div>`;
+        }
+        // summary breakdown
+        if((r.karungNgepok||0)>0||(r.karungGudang||0)>0){
+          html+=`<div class="rek-c-meta">
+            <span>🧵 Ngepok: <b>${r.karungNgepok||0} krg</b></span>
+            <span>🏭 Gudang: <b>${r.karungGudang||0} krg</b></span>
           </div>`;
-        });
-        html+=`</div>`;
+        }
       }
       html+=`<div class="rek-c-actions"><button class="rek-del" onclick="hapusRec(${r.id})">🗑 Hapus</button></div></div>`;
     });
